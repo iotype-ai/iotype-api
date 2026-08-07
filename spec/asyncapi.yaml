@@ -1,0 +1,192 @@
+asyncapi: 3.0.0
+
+info:
+  title: iotype Realtime ASR
+  version: "1.0.0"
+  description: |
+    Streaming speech recognition over a secure WebSocket.
+
+    **Lifecycle**
+
+    1. Open a WebSocket to `wss://iotype.com/socket/realtime`.
+    2. Send exactly one JSON `Initialize` message — nothing else may precede it.
+       Its fields live inside a `config` object:
+       `{"config":{"model":"io-fa","type":"access_token","token":"..."}}`
+    3. Stream raw PCM audio as binary frames.
+    4. Receive `partial` results while the speaker talks, and a `final`
+       result at each pause.
+    5. Close the socket when the session ends.
+
+    **Audio format** — PCM linear 16-bit, mono, little-endian. 16000 Hz is
+    recommended. The declared sample rate must match the bytes you actually
+    send. Do not base64-encode; send raw bytes. Prefer many small frames
+    (20-100 ms each) over few large ones — it lowers latency and improves
+    accuracy.
+
+    **Token choice** — use a `flash_token` from any client you do not control
+    (browser, Android, iOS, desktop). Use an `access_token` only for
+    server-to-server connections where the secret stays on your server.
+
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  externalDocs:
+    url: https://iotype.com/api-service/speech-to-text
+
+servers:
+  production:
+    host: iotype.com
+    pathname: /socket/realtime
+    protocol: wss
+    description: Production realtime ASR endpoint.
+
+channels:
+  realtime:
+    address: /socket/realtime
+    title: Realtime ASR session
+    messages:
+      initialize:
+        $ref: '#/components/messages/Initialize'
+      audioChunk:
+        $ref: '#/components/messages/AudioChunk'
+      partialResult:
+        $ref: '#/components/messages/PartialResult'
+      finalResult:
+        $ref: '#/components/messages/FinalResult'
+
+operations:
+  startSession:
+    action: send
+    channel:
+      $ref: '#/channels/realtime'
+    summary: Authenticate and select a recognition model
+    description: |
+      Must be the first message on the socket. Send no audio until the server
+      has accepted it.
+    messages:
+      - $ref: '#/channels/realtime/messages/initialize'
+
+  streamAudio:
+    action: send
+    channel:
+      $ref: '#/channels/realtime'
+    summary: Stream raw audio frames
+    messages:
+      - $ref: '#/channels/realtime/messages/audioChunk'
+
+  receiveResults:
+    action: receive
+    channel:
+      $ref: '#/channels/realtime'
+    summary: Receive interim and finalised transcripts
+    messages:
+      - $ref: '#/channels/realtime/messages/partialResult'
+      - $ref: '#/channels/realtime/messages/finalResult'
+
+components:
+
+  messages:
+
+    Initialize:
+      name: initialize
+      title: Initialize session
+      contentType: application/json
+      summary: |
+        First and only handshake message. The three fields are nested inside a
+        `config` envelope — they are not top-level.
+      payload:
+        type: object
+        required: [config]
+        properties:
+          config:
+            type: object
+            required: [model, type, token]
+            properties:
+              model:
+                $ref: '#/components/schemas/Model'
+              type:
+                $ref: '#/components/schemas/TokenType'
+              token:
+                type: string
+                description: The Access Token or Flash Token value.
+      examples:
+        - name: browserClient
+          payload:
+            config:
+              model: "io-fa"
+              type: "flash_token"
+              token: "YOUR_FLASH_TOKEN"
+        - name: serverClient
+          payload:
+            config:
+              model: "io-en"
+              type: "access_token"
+              token: "YOUR_ACCESS_TOKEN"
+
+    AudioChunk:
+      name: audioChunk
+      title: Audio frame
+      contentType: application/octet-stream
+      summary: Raw PCM 16-bit mono little-endian audio, sent as a binary frame.
+      payload:
+        type: string
+        format: binary
+
+    PartialResult:
+      name: partial
+      title: Partial result
+      contentType: application/json
+      summary: |
+        Interim transcript emitted while the speaker is mid-utterance. It may
+        be revised by later messages. Render it, but do not persist it.
+      payload:
+        type: object
+        properties:
+          type:
+            type: string
+            const: partial
+          text:
+            type: string
+      examples:
+        - name: interim
+          payload:
+            type: "partial"
+            text: "سلام حال"
+
+    FinalResult:
+      name: final
+      title: Final result
+      contentType: application/json
+      summary: |
+        Settled transcript for one utterance, emitted at a pause. It will not
+        change. Persist this. Recognition continues afterwards.
+      payload:
+        type: object
+        properties:
+          type:
+            type: string
+            const: final
+          text:
+            type: string
+      examples:
+        - name: settled
+          payload:
+            type: "final"
+            text: "سلام حال شما چطور است؟"
+
+  schemas:
+
+    Model:
+      type: string
+      enum: [io-fa, io-en, io-ar]
+      description: |
+        Recognition model.
+        `io-fa` Persian, `io-en` English, `io-ar` Arabic.
+        Matching the model to the spoken language materially improves accuracy.
+
+    TokenType:
+      type: string
+      enum: [access_token, flash_token]
+      description: |
+        Which kind of credential `token` holds. Use `flash_token` for any
+        client-side application.

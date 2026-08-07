@@ -1,0 +1,48 @@
+{
+  "name": "iotype-ai/sdk",
+  "description": "Official PHP SDK for iotype (iotype.com) — Persian, English and Arabic speech recognition, OCR, translation and text-to-speech.",
+  "type": "library",
+  "license": "MIT",
+  "keywords": [
+    "iotype",
+    "persian",
+    "farsi",
+    "asr",
+    "speech-to-text",
+    "speech-recognition",
+    "ocr",
+    "persian-ocr",
+    "tts",
+    "text-to-speech",
+    "translation",
+    "nlp"
+  ],
+  "homepage": "https://iotype.com/api-service",
+  "require": {
+    "php": ">=7.4",
+    "ext-curl": "*",
+    "ext-json": "*"
+  },
+  "suggest": {
+    "textalk/websocket": "Required for realtime ASR streaming (^1.5)"
+  },
+  "autoload": {
+    "psr-4": {
+      "Iotype\\": "src/"
+    }
+  },
+  "config": {
+    "sort-packages": true
+  },
+  "authors": [
+    {
+      "name": "iotype",
+      "homepage": "https://iotype.com"
+    }
+  ],
+  "support": {
+    "docs": "https://iotype.com/api-service",
+    "issues": "https://github.com/iotype-ai/iotype-api/issues",
+    "source": "https://github.com/iotype-ai/iotype-api"
+  }
+}

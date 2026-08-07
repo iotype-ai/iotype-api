@@ -1,0 +1,157 @@
+# Publishing
+
+Run these on your own machine. Every step needs credentials for the registry in
+question, so none of it can be automated from CI until you add the tokens as
+repository secrets.
+
+**Order matters.** Publish each real package before its alias — an alias whose
+dependency does not exist yet will fail to install and cannot be edited after
+the fact. Registries do not allow republishing a version.
+
+---
+
+## 0. Claim the names first
+
+Names are first-come. Claiming them costs nothing and takes minutes; losing
+`iotype` on npm to someone else is not recoverable.
+
+| Registry | Name | Status when last checked |
+| --- | --- | --- |
+| GitHub org | `iotype-ai` | claimed |
+| PyPI | `iotype-ai` | free |
+| PyPI | `iotype` | free — **claim this** |
+| npm scope | `@iotype-ai` | free |
+| npm | `iotype` | free — **claim this** |
+| npm scope | `@iotype` | taken by an unrelated company |
+| Packagist | `iotype-ai/sdk` | derives from the GitHub org |
+
+Create the npm organisation at <https://www.npmjs.com/org/create> using the name
+`iotype-ai`. That is what makes `@iotype-ai/sdk` publishable.
+
+---
+
+## 1. Python — `iotype-ai`
+
+```bash
+cd sdk/python
+python -m pip install --upgrade build twine
+rm -rf dist/
+python -m build
+twine check dist/*
+twine upload dist/*
+```
+
+Verify in a clean environment before moving on:
+
+```bash
+python -m venv /tmp/v && /tmp/v/bin/pip install iotype-ai
+/tmp/v/bin/python -c "from iotype import Iotype; print('ok')"
+```
+
+## 2. Python alias — `iotype`
+
+```bash
+cd sdk/aliases/pypi-iotype
+rm -rf dist/
+python -m build
+twine upload dist/*
+```
+
+```bash
+python -m venv /tmp/a && /tmp/a/bin/pip install iotype
+/tmp/a/bin/python -c "from iotype import Iotype; print('ok')"
+```
+
+The alias ships no modules — `iotype-ai` is what provides the importable
+`iotype` package. If the alias shipped one too, the two would collide.
+
+---
+
+## 3. npm — `@iotype-ai/sdk`
+
+```bash
+cd sdk/javascript
+npm install
+npm run build
+npm publish --access public
+```
+
+`--access public` is required. Scoped packages default to private, and the
+publish will be rejected on a free account without it.
+
+## 4. npm alias — `iotype`
+
+```bash
+cd sdk/aliases/npm-iotype
+npm publish
+```
+
+```bash
+mkdir /tmp/n && cd /tmp/n && npm init -y >/dev/null && npm install iotype
+node -e "import('iotype').then(m => console.log(typeof m.Iotype))"
+```
+
+---
+
+## 5. PHP — `iotype-ai/sdk`
+
+Packagist reads directly from the repository; there is no upload step.
+
+1. Sign in at <https://packagist.org> with the `iotype-ai` GitHub account.
+2. Submit `https://github.com/iotype-ai/iotype-api`.
+3. Set the subdirectory to `sdk/php` when prompted.
+4. Enable the GitHub webhook so new tags publish automatically.
+
+## 6. Go — `github.com/iotype-ai/iotype-api/sdk/go`
+
+No registry. `pkg.go.dev` indexes the module the first time anyone fetches it:
+
+```bash
+GOPROXY=proxy.golang.org go list -m github.com/iotype-ai/iotype-api/sdk/go@latest
+```
+
+**The module path is baked into `go.mod` and into every user's imports.** If the
+repository ever moves to a different organisation, this path breaks for everyone
+who installed it. Go does not follow GitHub's redirects.
+
+---
+
+## 7. Tag the release
+
+```bash
+git tag -a v1.0.0 -m "v1.0.0"
+git push origin v1.0.0
+```
+
+Go resolves versions from tags, so this is what makes `@latest` work.
+
+---
+
+## After publishing
+
+Fill in the real links on each registry page — PyPI, npm and Packagist all
+render the project URLs from the manifests, and they are already set to point at
+<https://iotype.com/api-service>.
+
+Then set the three things that can only be set in the GitHub web interface:
+
+- **Website:** `https://iotype.com/api-service`
+- **Description:** a one-line summary naming the services
+- **Topics:** `persian`, `farsi`, `speech-to-text`, `asr`, `ocr`, `persian-ocr`,
+  `text-to-speech`, `translation`, `nlp`, `api`, `sdk`
+
+---
+
+## Security
+
+**Never commit a registry token.** Use `~/.pypirc` and `~/.npmrc` locally, or
+repository secrets if you later automate this.
+
+Before every publish, confirm no API token slipped into the tree:
+
+```bash
+python .github/scripts/check-anchors.py     # anchor policy
+grep -rInE '"[0-9]+\|[A-Za-z0-9]{40,}"' --exclude-dir=.git .
+```
+
+CI runs both checks on every push, but a local publish bypasses CI entirely.

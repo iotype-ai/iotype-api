@@ -1,0 +1,206 @@
+{
+  "info": {
+    "name": "iotype API",
+    "description": "Persian/English/Arabic speech, OCR, translation and text-to-speech.\n\n**Setup:** set the collection variable `token` to your iotype token, or define an environment variable of the same name. `baseUrl` defaults to https://iotype.com.\n\n**Note:** `/io/v1/ocr` and `/io/v1/transcribe` are asynchronous — they return a `uuid`, not a result. Use *Track file* to poll. The collection stores the returned uuid in the `uuid` variable automatically.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://iotype.com" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "uuid", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Translation",
+      "item": [
+        {
+          "name": "Translate",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" },
+              { "key": "X-Requested-With", "value": "XMLHttpRequest" }
+            ],
+            "url": { "raw": "{{baseUrl}}/io/v1/translate", "host": ["{{baseUrl}}"], "path": ["io", "v1", "translate"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"source_lang\": \"fa\",\n  \"destination_lang\": \"en\",\n  \"text\": \"سلام! امروز هوا بسیار عالی است.\"\n}"
+            },
+            "description": "Synchronous. `source_lang` and `destination_lang` accept `fa`, `en`, `ar`. Returns `{ \"result\": \"...\" }`."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Text to speech",
+      "item": [
+        {
+          "name": "Synthesize",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" },
+              { "key": "X-Requested-With", "value": "XMLHttpRequest" }
+            ],
+            "url": { "raw": "{{baseUrl}}/io/v1/synthesis", "host": ["{{baseUrl}}"], "path": ["io", "v1", "synthesis"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tone\": \"general\",\n  \"speaker\": \"tanaz\",\n  \"text\": \"سلام! امروز هوا بسیار عالی است.\"\n}"
+            },
+            "description": "Synchronous. `tone`: general | formal. `speaker`: behrooz, mehran, farshid, sara, mitra, siavash, shirin, kaveh, amir, tanaz, mahsa. Returns `{ \"url\": \"...mp3\" }`."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Speech to text",
+      "item": [
+        {
+          "name": "Instant transcription",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "X-Requested-With", "value": "XMLHttpRequest" }
+            ],
+            "url": { "raw": "{{baseUrl}}/io/v1/transcribe/instant", "host": ["{{baseUrl}}"], "path": ["io", "v1", "transcribe", "instant"] },
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "file", "type": "file", "src": [], "description": "MP3 file" }]
+            },
+            "description": "Synchronous. Short clips only. Returns `{ \"result\": \"...\" }`. Do not set Content-Type — Postman sets the multipart boundary."
+          }
+        },
+        {
+          "name": "Transcription (async)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const uuid = pm.response.json()?.file?.uuid;",
+                  "if (uuid) {",
+                  "  pm.collectionVariables.set('uuid', uuid);",
+                  "  console.log('Stored uuid:', uuid, '— now run \"Track file\" until result is non-null.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "X-Requested-With", "value": "XMLHttpRequest" }
+            ],
+            "url": { "raw": "{{baseUrl}}/io/v1/transcribe", "host": ["{{baseUrl}}"], "path": ["io", "v1", "transcribe"] },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": [], "description": "MP3 file" },
+                { "key": "should_summarize", "value": "true", "type": "text" },
+                { "key": "source_lang", "value": "fa", "type": "text", "description": "fa | en | ar" }
+              ]
+            },
+            "description": "ASYNCHRONOUS. Returns a file object with a uuid, not the transcript. The test script stores the uuid in the `uuid` variable — then poll *Track file*."
+          }
+        }
+      ]
+    },
+    {
+      "name": "OCR",
+      "item": [
+        {
+          "name": "OCR (async)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const uuid = pm.response.json()?.file?.uuid;",
+                  "if (uuid) {",
+                  "  pm.collectionVariables.set('uuid', uuid);",
+                  "  console.log('Stored uuid:', uuid, '— now run \"Track file\" until result is non-null.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "X-Requested-With", "value": "XMLHttpRequest" }
+            ],
+            "url": { "raw": "{{baseUrl}}/io/v1/ocr", "host": ["{{baseUrl}}"], "path": ["io", "v1", "ocr"] },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": [], "description": "PDF or JPG" },
+                { "key": "should_summarize", "value": "true", "type": "text" }
+              ]
+            },
+            "description": "ASYNCHRONOUS. Returns a file object with a uuid, not the text. Poll *Track file*."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Files",
+      "item": [
+        {
+          "name": "List files",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/io/v1/files", "host": ["{{baseUrl}}"], "path": ["io", "v1", "files"] },
+            "body": { "mode": "raw", "raw": "{}" },
+            "description": "POST with an empty JSON object — not GET, and not an empty body. Returns `{ \"files\": [...] }`."
+          }
+        },
+        {
+          "name": "Track file",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const procs = pm.response.json()?.file?.processes ?? [];",
+                  "const done = procs.filter(p => p.result !== null && p.result !== undefined);",
+                  "if (done.length) {",
+                  "  done.forEach(p => console.log(p.type, '->', String(p.result).slice(0, 200)));",
+                  "} else {",
+                  "  console.log('Still processing. Wait, then send again. Use 5s backoff doubling to 60s.');",
+                  "}",
+                  "pm.test('request succeeded', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/io/v1/file/track", "host": ["{{baseUrl}}"], "path": ["io", "v1", "file", "track"] },
+            "body": { "mode": "raw", "raw": "{\n  \"uuid\": \"{{uuid}}\"\n}" },
+            "description": "Poll this until a process carries a non-null `result`. Treat `result != null` as done — do not branch on `status`."
+          }
+        }
+      ]
+    }
+  ]
+}

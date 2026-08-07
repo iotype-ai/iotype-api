@@ -1,0 +1,642 @@
+openapi: 3.1.0
+
+info:
+  title: iotype API
+  version: "1.0.0"
+  summary: Persian/English/Arabic speech, OCR, translation and text-to-speech APIs.
+  description: |
+    iotype exposes AI and NLP capabilities over a small HTTP API plus one
+    WebSocket channel for real-time speech recognition.
+
+    **Services**
+
+    | Service | Kind | Endpoint |
+    | --- | --- | --- |
+    | Instant transcription | sync | `POST /io/v1/transcribe/instant` |
+    | Transcription (long audio) | async | `POST /io/v1/transcribe` |
+    | OCR (image / PDF to text) | async | `POST /io/v1/ocr` |
+    | Translation | sync | `POST /io/v1/translate` |
+    | Text to speech | sync | `POST /io/v1/synthesis` |
+    | List submitted files | sync | `POST /io/v1/files` |
+    | Track one file | sync | `POST /io/v1/file/track` |
+    | Real-time ASR | streaming | `wss://iotype.com/socket/realtime` (see `asyncapi.yaml`) |
+
+    **Authentication** — every request carries `Authorization: Bearer <TOKEN>`.
+    Generate a token at https://iotype.com/api-service/authentication.
+
+    **Async services** — `/io/v1/ocr` and `/io/v1/transcribe` return a `file`
+    object immediately. Poll `/io/v1/file/track` with `file.uuid` until the
+    relevant entry in `file.processes` carries a `result`.
+
+    **Billing** — usage is metered in tokens. Failed requests are not billed.
+    New accounts start with 300 free tokens.
+
+    > NOTE: items marked `x-unverified: true` in this spec could not be
+    > confirmed from the published documentation and should be validated
+    > against a live response before release.
+
+  contact:
+    name: iotype
+    url: https://iotype.com/api-service
+  license:
+    name: MIT
+    identifier: MIT
+
+servers:
+  - url: https://iotype.com
+    description: Production
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Speech to text
+    description: Convert recorded audio into text.
+  - name: OCR
+    description: Convert images and PDFs into text.
+  - name: Translation
+    description: Translate text between Persian, English and Arabic.
+  - name: Text to speech
+    description: Synthesise speech from text.
+  - name: Files
+    description: Track asynchronous processing jobs.
+
+paths:
+
+  /io/v1/transcribe/instant:
+    post:
+      operationId: instantTranscribe
+      tags: [Speech to text]
+      summary: Transcribe a short audio file synchronously
+      description: |
+        Upload an MP3 file and receive its transcript in the same response.
+        Intended for short clips where latency matters more than accuracy.
+
+        For best results the audio should have a single speaker, no background
+        noise and clear articulation. For long recordings use
+        `POST /io/v1/transcribe` instead.
+      parameters:
+        - $ref: '#/components/parameters/Accept'
+        - $ref: '#/components/parameters/XRequestedWith'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Audio file in MP3 format.
+            encoding:
+              file:
+                contentType: audio/mpeg
+      responses:
+        '200':
+          description: Transcript produced.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
+                    description: The transcribed text.
+              examples:
+                success:
+                  value:
+                    result: "سلام، حال شما چطور است؟"
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '402': { $ref: '#/components/responses/PaymentRequired' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /io/v1/transcribe:
+    post:
+      operationId: transcribe
+      tags: [Speech to text]
+      summary: Transcribe a long audio file asynchronously
+      description: |
+        Upload an MP3 file for high-accuracy transcription. The response
+        returns immediately with a `file` object; the transcript appears in
+        `file.processes[].result` once processing finishes.
+
+        Poll `POST /io/v1/file/track` with the returned `uuid` to follow
+        progress. Processing time scales with audio duration.
+      parameters:
+        - $ref: '#/components/parameters/Accept'
+        - $ref: '#/components/parameters/XRequestedWith'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Audio file in MP3 format.
+                should_summarize:
+                  type: boolean
+                  default: false
+                  description: Also produce a summary of the transcript.
+                source_lang:
+                  $ref: '#/components/schemas/Language'
+            encoding:
+              file:
+                contentType: audio/mpeg
+      responses:
+        '200':
+          description: File accepted for processing.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  file:
+                    $ref: '#/components/schemas/File'
+              examples:
+                accepted:
+                  value:
+                    file:
+                      uuid: "9f1c2d84-1f4e-4a1b-9d0e-3f6a2b7c8e11"
+                      name: "1712345678_9f1c2d84.mp3"
+                      filename: "meeting.mp3"
+                      processes:
+                        - type: "transcribe"
+                          status: "processing"
+                          result: null
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '402': { $ref: '#/components/responses/PaymentRequired' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /io/v1/ocr:
+    post:
+      operationId: ocr
+      tags: [OCR]
+      summary: Extract text from an image or PDF
+      description: |
+        Upload a PDF or JPG and receive a `file` object; the extracted text
+        appears in `file.processes[].result` once processing finishes.
+
+        The engine works on scanned and text-layer PDFs alike. Input should
+        have a white background, typed (not handwritten) text, be sharp and
+        not rotated. Charts and tables are not converted — text only.
+      parameters:
+        - $ref: '#/components/parameters/Accept'
+        - $ref: '#/components/parameters/XRequestedWith'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: A PDF or JPG file.
+                should_summarize:
+                  type: boolean
+                  default: false
+                  description: Also produce a summary of the extracted text.
+      responses:
+        '200':
+          description: File accepted for processing.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  file:
+                    $ref: '#/components/schemas/File'
+              examples:
+                accepted:
+                  value:
+                    file:
+                      uuid: "3c7d9a10-55b2-4e7c-8a31-77ab0c4d9e02"
+                      name: "1712345999_3c7d9a10.pdf"
+                      filename: "contract.pdf"
+                      processes:
+                        - type: "ocr"
+                          status: "processing"
+                          result: null
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '402': { $ref: '#/components/responses/PaymentRequired' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /io/v1/translate:
+    post:
+      operationId: translate
+      tags: [Translation]
+      summary: Translate text between Persian, English and Arabic
+      parameters:
+        - $ref: '#/components/parameters/Accept'
+        - $ref: '#/components/parameters/XRequestedWith'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [source_lang, destination_lang, text]
+              properties:
+                source_lang:
+                  $ref: '#/components/schemas/Language'
+                destination_lang:
+                  $ref: '#/components/schemas/Language'
+                text:
+                  type: string
+                  description: The text to translate.
+            examples:
+              faToEn:
+                value:
+                  source_lang: "fa"
+                  destination_lang: "en"
+                  text: "سلام! امروز هوا بسیار عالی است."
+      responses:
+        '200':
+          description: Translation produced.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
+                    description: The translated text.
+              examples:
+                success:
+                  value:
+                    result: "Hello! The weather is excellent today."
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '402': { $ref: '#/components/responses/PaymentRequired' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /io/v1/synthesis:
+    post:
+      operationId: synthesize
+      tags: [Text to speech]
+      summary: Convert text to an MP3 narration
+      description: |
+        Returns a URL to a generated MP3 file. Choose a speaker voice and a
+        delivery tone.
+      parameters:
+        - $ref: '#/components/parameters/Accept'
+        - $ref: '#/components/parameters/XRequestedWith'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                tone:
+                  $ref: '#/components/schemas/Tone'
+                speaker:
+                  $ref: '#/components/schemas/Speaker'
+                text:
+                  type: string
+                  description: The text to narrate.
+            examples:
+              basic:
+                value:
+                  tone: "general"
+                  speaker: "tanaz"
+                  text: "سلام! امروز هوا بسیار عالی است."
+      responses:
+        '200':
+          description: Audio generated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+                    description: URL of the generated MP3 file.
+              examples:
+                success:
+                  value:
+                    url: "https://iotype.com/storage/tts/9f1c2d84.mp3"
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '402': { $ref: '#/components/responses/PaymentRequired' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /io/v1/files:
+    post:
+      operationId: listFiles
+      tags: [Files]
+      summary: List every file submitted to iotype
+      description: |
+        Returns all files this token has submitted for processing, together
+        with their processes. The request takes no body — send `{}`.
+      parameters:
+        - $ref: '#/components/parameters/ContentTypeJson'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+            examples:
+              empty:
+                value: {}
+      responses:
+        '200':
+          description: File list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  files:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/File'
+              examples:
+                success:
+                  value:
+                    files:
+                      - uuid: "9f1c2d84-1f4e-4a1b-9d0e-3f6a2b7c8e11"
+                        name: "1712345678_9f1c2d84.mp3"
+                        filename: "meeting.mp3"
+                        processes:
+                          - type: "transcribe"
+                            status: "done"
+                            result: "متن کامل جلسه ..."
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /io/v1/file/track:
+    post:
+      operationId: trackFile
+      tags: [Files]
+      summary: Fetch the status and result of one file
+      description: |
+        Poll this endpoint with a `uuid` returned by `/io/v1/ocr` or
+        `/io/v1/transcribe` until the process carries a `result`.
+
+        A backoff of 5 seconds, doubling to a 60 second ceiling, is a
+        reasonable default.
+      parameters:
+        - $ref: '#/components/parameters/ContentTypeJson'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [uuid]
+              properties:
+                uuid:
+                  type: string
+                  description: The file identifier.
+            examples:
+              track:
+                value:
+                  uuid: "9f1c2d84-1f4e-4a1b-9d0e-3f6a2b7c8e11"
+      responses:
+        '200':
+          description: File details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  file:
+                    $ref: '#/components/schemas/File'
+              examples:
+                done:
+                  value:
+                    file:
+                      uuid: "9f1c2d84-1f4e-4a1b-9d0e-3f6a2b7c8e11"
+                      name: "1712345678_9f1c2d84.mp3"
+                      filename: "meeting.mp3"
+                      processes:
+                        - type: "transcribe"
+                          status: "done"
+                          result: "متن کامل جلسه ..."
+                        - type: "summarize"
+                          status: "done"
+                          result: "خلاصه جلسه ..."
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /io/v1/flash-token:
+    post:
+      operationId: createFlashToken
+      x-unverified: true
+      tags: [Speech to text]
+      summary: Issue a short-lived token for browser/mobile ASR clients
+      description: |
+        **The path and response shape of this endpoint are not published.**
+        The documentation describes only its request headers. Treat this
+        definition as a placeholder and confirm it against a live call.
+
+        A Flash Token is single-use and short-lived. Mint it on your server
+        with your Access Token, hand it to the client, and let the client open
+        the WebSocket with it. Never ship an Access Token to a browser or a
+        mobile app.
+      parameters:
+        - $ref: '#/components/parameters/Accept'
+        - $ref: '#/components/parameters/XRequestedWith'
+      responses:
+        '200':
+          description: Flash token issued.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  expires_in:
+                    type: integer
+                    description: Lifetime in seconds.
+              examples:
+                success:
+                  value:
+                    token: "flash_2f8c...c41a"
+                    expires_in: 60
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: |
+        `Authorization: Bearer <TOKEN>`. Generate a token from your iotype
+        dashboard. A missing, malformed, expired or exhausted token yields
+        `401 Unauthorized`.
+
+  parameters:
+    Accept:
+      name: Accept
+      in: header
+      required: true
+      schema:
+        type: string
+        const: application/json
+    XRequestedWith:
+      name: X-Requested-With
+      in: header
+      required: true
+      schema:
+        type: string
+        const: XMLHttpRequest
+    ContentTypeJson:
+      name: Content-Type
+      in: header
+      required: true
+      schema:
+        type: string
+        const: application/json
+
+  schemas:
+
+    Language:
+      type: string
+      enum: [fa, en, ar]
+      description: |
+        ISO 639-1 language code.
+        `fa` Persian, `en` English, `ar` Arabic.
+
+    Tone:
+      type: string
+      enum: [general, formal]
+      default: general
+      description: Delivery style of the synthesised narration.
+
+    Speaker:
+      type: string
+      enum:
+        - behrooz
+        - mehran
+        - farshid
+        - sara
+        - mitra
+        - siavash
+        - shirin
+        - kaveh
+        - amir
+        - tanaz
+        - mahsa
+      description: Voice used for narration.
+
+    ProcessStatus:
+      type: string
+      x-unverified: true
+      enum: [pending, processing, done, failed]
+      description: |
+        **Unverified.** The published documentation does not enumerate the
+        process lifecycle states. Do not branch on exact strings until this is
+        confirmed; treat "`result` is non-null" as the completion signal.
+
+    Process:
+      type: object
+      description: One unit of work performed on an uploaded file.
+      properties:
+        type:
+          type: string
+          description: Which operation this process performs, e.g. `ocr`, `transcribe`, `summarize`.
+        status:
+          $ref: '#/components/schemas/ProcessStatus'
+        result:
+          type: [string, "null"]
+          description: The output of the process. `null` until the process finishes.
+
+    File:
+      type: object
+      description: An uploaded file and the processes running on it.
+      properties:
+        uuid:
+          type: string
+          description: Identifier used to track this file.
+        name:
+          type: string
+          description: The file's name on iotype servers.
+        filename:
+          type: string
+          description: The original file name you uploaded.
+        processes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Process'
+
+    Error:
+      type: object
+      x-unverified: true
+      description: |
+        **Unverified.** The documentation does not publish an error body.
+        This shape follows the Laravel convention the API appears to be built
+        on; confirm before relying on it.
+      properties:
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+
+  responses:
+    Unauthorized:
+      description: |
+        Missing, malformed, expired or exhausted token. This is the only error
+        status named in the published documentation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            unauthorized:
+              value:
+                message: "Unauthenticated."
+    PaymentRequired:
+      description: Token balance exhausted. **Unverified status code.**
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: No file matches the supplied uuid. **Unverified status code.**
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    PayloadTooLarge:
+      description: Upload exceeds the size limit. **Unverified status code.**
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    UnprocessableEntity:
+      description: Validation failed on one or more fields. **Unverified status code.**
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    TooManyRequests:
+      description: Rate limit exceeded. **Unverified status code.**
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

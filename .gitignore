@@ -1,0 +1,45 @@
+# Secrets — never commit a token
+.env
+.env.*
+!.env.example
+*.token
+
+# Generated media / test fixtures
+*.mp3
+*.wav
+*.pdf
+narration.mp3
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+dist/
+build/
+sdk/aliases/pypi-iotype/dist/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Node
+node_modules/
+sdk/aliases/npm-iotype/node_modules/
+sdk/aliases/npm-iotype/package-lock.json
+sdk/javascript/dist/
+*.tsbuildinfo
+.npm/
+
+# PHP
+vendor/
+composer.lock
+
+# Go
+sdk/go/bin/
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp

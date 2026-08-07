@@ -1,0 +1,33 @@
+# GitHub Pages configuration.
+#
+# Publishing this folder creates a small public documentation site whose
+# outbound links to iotype.com are dofollow — unlike links inside a GitHub
+# README, which GitHub marks rel="nofollow".
+#
+# After the first deploy, set `url` to the real Pages address (or a custom
+# subdomain such as https://developers.iotype.com via a CNAME file).
+
+title: iotype API — developer documentation
+description: >-
+  Official developer documentation and SDKs for iotype: Persian, English and
+  Arabic speech recognition, OCR, translation and text-to-speech.
+url: "https://iotype-ai.github.io"
+baseurl: "/iotype-api"
+lang: en
+
+# The canonical home of this content is the iotype website. Declaring it stops
+# the Pages site competing with iotype.com for the same queries.
+canonical_url: "https://iotype.com/api-service"
+
+author: iotype
+logo: null
+
+theme: jekyll-theme-cayman
+
+plugins:
+  - jekyll-seo-tag
+  - jekyll-sitemap
+
+exclude:
+  - Gemfile
+  - Gemfile.lock

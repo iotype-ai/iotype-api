@@ -1,0 +1,123 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+
+  spec:
+    name: Validate API specs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - name: Lint OpenAPI
+        run: npx --yes @redocly/cli@latest lint spec/openapi.yaml
+      - name: Validate AsyncAPI
+        run: npx --yes @asyncapi/cli@latest validate spec/asyncapi.yaml
+
+  python:
+    name: Python SDK
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.12"]
+    defaults:
+      run: { working-directory: sdk/python }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "${{ matrix.python-version }}" }
+      - run: pip install -e ".[dev,realtime]"
+      - run: ruff check iotype
+      - run: python -m compileall iotype examples
+      - run: pytest -q
+        if: hashFiles('sdk/python/tests/**') != ''
+
+  javascript:
+    name: JavaScript SDK
+    runs-on: ubuntu-latest
+    defaults:
+      run: { working-directory: sdk/javascript }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - run: npm install
+      - run: npm run typecheck
+      - run: npm run build
+
+  go:
+    name: Go SDK
+    runs-on: ubuntu-latest
+    defaults:
+      run: { working-directory: sdk/go }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: "1.22" }
+      - run: go mod tidy
+      - run: go vet ./...
+      - run: go build ./...
+      - name: Check gofmt
+        run: test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
+
+  php:
+    name: PHP SDK
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php-version: ["7.4", "8.3"]
+    defaults:
+      run: { working-directory: sdk/php }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "${{ matrix.php-version }}"
+          extensions: curl, json
+      - name: Syntax check
+        run: find src examples -name "*.php" -print0 | xargs -0 -n1 php -l
+      - run: composer validate --strict
+      - run: composer install --no-interaction --no-progress
+
+  shell:
+    name: curl examples
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax check
+        run: for f in examples/curl/*.sh; do bash -n "$f"; done
+      - uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: ./examples/curl
+          severity: warning
+
+  anchors:
+    name: Anchor text policy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Every link to a service page must be API-qualified
+        run: python .github/scripts/check-anchors.py
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Reject committed iotype tokens
+        run: |
+          # iotype tokens look like "<id>|<40+ hex/alnum chars>"
+          if grep -rInE '"[0-9]+\|[A-Za-z0-9]{40,}"' \
+               --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=vendor . ; then
+            echo "::error::A real-looking iotype token is present. Remove it and regenerate the token."
+            exit 1
+          fi
+          echo "No tokens found."

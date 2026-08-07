@@ -1,0 +1,26 @@
+# iotype
+
+> AI web services for Persian, English and Arabic: real-time speech recognition, audio file transcription, OCR for images and PDFs, machine translation, and text-to-speech. One bearer-token HTTP API plus a WebSocket channel for streaming ASR. Usage is metered in tokens; failed requests are not billed.
+
+Base URL: `https://iotype.com`. Every endpoint is `POST` and requires `Authorization: Bearer <TOKEN>`, `Accept: application/json` and `X-Requested-With: XMLHttpRequest`.
+
+`POST /io/v1/ocr` and `POST /io/v1/transcribe` are asynchronous: they return a file object with a `uuid`, and you poll `POST /io/v1/file/track` until a process carries a non-null `result`.
+
+## Specifications
+
+- [OpenAPI 3.1 spec](https://raw.githubusercontent.com/iotype-ai/iotype-api/main/spec/openapi.yaml): Complete machine-readable definition of all HTTP endpoints, schemas, enums, examples and error responses. Use this to generate clients.
+- [AsyncAPI 3.0 spec](https://raw.githubusercontent.com/iotype-ai/iotype-api/main/spec/asyncapi.yaml): The real-time ASR WebSocket channel — handshake message, binary audio format, and partial/final result messages.
+
+## Guides
+
+- [Authentication](https://iotype.com/api-service/authentication): Bearer token setup, and the Access Token vs Flash Token distinction for client-side apps.
+- [Realtime ASR](https://iotype.com/api-service/speech-to-text): Streaming speech-to-text over `wss://iotype.com/socket/realtime`. The handshake is `{"config":{"model":"io-fa","type":"access_token","token":"..."}}` — the fields are nested inside `config`. Audio is PCM 16-bit mono little-endian at 16 kHz, sent as binary frames.
+- [Transcription](https://iotype.com/api-service/transcription): `POST /io/v1/transcribe/instant` for short clips (synchronous) and `POST /io/v1/transcribe` for long recordings (asynchronous, higher accuracy).
+- [OCR](https://iotype.com/api-service/ocr): `POST /io/v1/ocr` converts PDF and JPG to text, with optional summarisation. Works on scanned and text-layer PDFs. Text only — no charts or tables.
+- [Translation](https://iotype.com/api-service/translation): `POST /io/v1/translate` between `fa`, `en` and `ar`. Synchronous.
+- [Text to speech](https://iotype.com/api-service/text-to-speech): `POST /io/v1/synthesis` returns a URL to a generated MP3. Eleven voices, two tones.
+
+## Optional
+
+- [Instructions for AI coding assistants](https://raw.githubusercontent.com/iotype-ai/iotype-api/main/AGENTS.md): Concentrated rules, the async polling pattern, and the list of behaviours that are commonly generated incorrectly.
+- [Pricing](https://iotype.com/plans/api): Token packages. New accounts receive 300 free tokens.

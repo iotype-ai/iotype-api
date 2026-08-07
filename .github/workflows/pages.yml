@@ -1,0 +1,45 @@
+name: Deploy documentation site
+
+# Publishes site/ to GitHub Pages. Enable it once under
+# Settings → Pages → Build and deployment → Source: GitHub Actions.
+#
+# Why bother: links inside a GitHub README carry rel="nofollow", so they pass
+# no ranking signal. A Pages site is an ordinary web page — its links to
+# iotype.com are dofollow, and jekyll-sitemap submits it to search engines.
+
+on:
+  push:
+    branches: [main]
+    paths: ["site/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./site
+          destination: ./_site
+      - uses: actions/upload-pages-artifact@v3
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
