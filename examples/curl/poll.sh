@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Poll a uuid until the requested process carries a result.
 # Backoff: 5s doubling to a 60s ceiling. Overall deadline: 30 minutes.
-# shellcheck source=examples/curl/_common.sh
+# shellcheck source-path=SCRIPTDIR
+# shellcheck source=_common.sh
 source "$(dirname "$0")/_common.sh"
 
 UUID="${1:?usage: poll.sh <uuid> [process-type]}"

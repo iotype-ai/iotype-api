@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # PDF or JPG -> text. ASYNCHRONOUS: returns a uuid, then polls until done.
-# shellcheck source=examples/curl/_common.sh
+# shellcheck source-path=SCRIPTDIR
+# shellcheck source=_common.sh
 source "$(dirname "$0")/_common.sh"
 
 FILE="${1:?usage: ocr.sh <file.pdf|file.jpg> [summarize]}"

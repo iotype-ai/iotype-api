@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Translate text between fa / en / ar. Synchronous.
-# shellcheck source=examples/curl/_common.sh
+# shellcheck source-path=SCRIPTDIR
+# shellcheck source=_common.sh
 source "$(dirname "$0")/_common.sh"
 
 TEXT="${1:-سلام! امروز هوا بسیار عالی است.}"
