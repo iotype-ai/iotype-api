@@ -129,10 +129,12 @@ examples/browser-asr/ کلاینت تست‌شده‌ی مرورگر برای پ
 postman/        کالکشن قابل ایمپورت Postman
 sdk/python/     SDK رسمی پایتون
 sdk/javascript/ SDK رسمی جاوااسکریپت/تایپ‌اسکریپت
-sdk/php/        SDK رسمی PHP
+sdk/php/        SDK رسمی PHP (فایل composer.json آن در ریشه است)
 sdk/go/         SDK رسمی Go
 sdk/aliases/    alias روی PyPI تا `pip install iotype` هم کار کند
 site/           سورس سایت مستندات روی GitHub Pages
+composer.json   مانیفست پکیج PHP؛ Packagist فقط فایل ریشه را می‌خواند
+.gitattributes  بقیه‌ی فایل‌ها را از دانلود Composer خارج می‌کند
 PUBLISHING.md   راهنمای انتشار در هر رجیستری
 AGENTS.md       راهنما برای دستیارهای کدنویسی هوش مصنوعی
 llms.txt        فهرست ماشین‌خوان برای LLMها

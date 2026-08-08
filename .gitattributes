@@ -1,0 +1,34 @@
+# Composer installs a package by downloading a dist archive of the whole
+# repository. Without this, `composer require iotype-ai/sdk` would pull the
+# Python, JavaScript and Go SDKs, both documentation trees and the specs into
+# every PHP project's vendor/ directory.
+#
+# export-ignore keeps those out of the archive. It does not affect the
+# repository itself — everything below is still present on GitHub.
+
+/docs               export-ignore
+/spec               export-ignore
+/site               export-ignore
+/postman            export-ignore
+/examples           export-ignore
+/sdk/python         export-ignore
+/sdk/javascript     export-ignore
+/sdk/go             export-ignore
+/sdk/aliases        export-ignore
+/.github            export-ignore
+/.gitattributes     export-ignore
+/.gitignore         export-ignore
+/.env.example       export-ignore
+/llms.txt           export-ignore
+/AGENTS.md          export-ignore
+/PUBLISHING.md      export-ignore
+/CONTRIBUTING.md    export-ignore
+/README.fa.md       export-ignore
+
+# Kept in the archive: composer.json, LICENSE, README.md, CHANGELOG.md and
+# sdk/php/ — everything a PHP consumer needs and nothing more.
+
+# Normalise line endings so the archive is stable across platforms.
+* text=auto eol=lf
+*.png binary
+*.mp3 binary

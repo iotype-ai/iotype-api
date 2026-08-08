@@ -45,6 +45,13 @@ Corrected against a tested browser client. The previously documented shapes were
   end-of-stream message existed.
 - Added `examples/browser-asr/` — the tested reference client.
 
+### Changed (PHP packaging)
+- `composer.json` moved to the repository root. Packagist only reads the root
+  manifest — a package nested in a subdirectory is invisible to it. The
+  autoloader maps `Iotype\\` to `sdk/php/src/`.
+- Added `.gitattributes` with `export-ignore` so `composer require` downloads
+  only the PHP code: 22 files instead of 109.
+
 ### Known gaps
 Items marked `x-unverified` in the spec, pending confirmation against live responses:
 - Flash Token endpoint path, response shape and TTL

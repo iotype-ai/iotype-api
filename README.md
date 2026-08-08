@@ -122,10 +122,12 @@ examples/browser-asr/ Tested browser client for the realtime ASR protocol
 postman/       Importable Postman collection
 sdk/python/    Official Python SDK
 sdk/javascript/ Official JavaScript/TypeScript SDK
-sdk/php/       Official PHP SDK
+sdk/php/       Official PHP SDK (its composer.json is at the repo root — see below)
 sdk/go/        Official Go SDK
 sdk/aliases/   PyPI alias so `pip install iotype` also works
 site/          Source of the GitHub Pages documentation site
+composer.json  PHP package manifest; Packagist only reads the root one
+.gitattributes Keeps non-PHP files out of the Composer download
 PUBLISHING.md  Release runbook for every registry
 AGENTS.md      Instructions for AI coding assistants
 llms.txt       Machine-readable index for LLMs

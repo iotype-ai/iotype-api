@@ -112,10 +112,29 @@ On npm the package is simply `@iotype-ai/sdk`.
 
 Packagist reads directly from the repository; there is no upload step.
 
-1. Sign in at <https://packagist.org> with the `iotype-ai` GitHub account.
-2. Submit `https://github.com/iotype-ai/iotype-api`.
-3. Set the subdirectory to `sdk/php` when prompted.
-4. Enable the GitHub webhook so new tags publish automatically.
+**Packagist only reads `composer.json` from the repository root.** There is no
+subdirectory option — a manifest at `sdk/php/composer.json` is invisible to it.
+So the manifest lives at the root and its autoloader points into `sdk/php/src/`:
+
+```json
+"autoload": { "psr-4": { "Iotype\\": "sdk/php/src/" } }
+```
+
+`.gitattributes` marks the other SDKs, docs and specs `export-ignore`, so a PHP
+consumer downloads only the PHP code — not the Python, JavaScript and Go trees.
+
+1. Sign in at <https://packagist.org> with **Log in with GitHub**, using the
+   account that owns the `iotype-ai` organisation.
+2. Grant Packagist access to the `iotype-ai` organisation when GitHub asks.
+   Without this it cannot see the repository or install the webhook.
+3. Submit `https://github.com/iotype-ai/iotype-api`.
+4. Confirm the detected name is `iotype-ai/sdk` — it comes from `composer.json`,
+   not from the repository name.
+5. Check the package page for a warning about auto-updating. If present, trigger
+   an account sync so Packagist installs the push webhook.
+
+Versions come from git tags, so `v1.0.0` must be pushed before a stable release
+appears.
 
 ## 6. Go — `github.com/iotype-ai/iotype-api/sdk/go`
 

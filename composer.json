@@ -28,7 +28,7 @@
   },
   "autoload": {
     "psr-4": {
-      "Iotype\\": "src/"
+      "Iotype\\": "sdk/php/src/"
     }
   },
   "config": {

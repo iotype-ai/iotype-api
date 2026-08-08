@@ -1,9 +1,14 @@
 # iotype — PHP SDK
 
 ```bash
-composer require iotype/sdk
+composer require iotype-ai/sdk
 composer require textalk/websocket   # only if you need realtime ASR
 ```
+
+> The `composer.json` for this package lives at the **repository root**, not in
+> this directory. Packagist only reads the root manifest, so a package nested in
+> a subdirectory would be invisible to it. The autoloader maps `Iotype\` to
+> `sdk/php/src/`.
 
 PHP 7.4+, with `ext-curl` and `ext-json`.
 
