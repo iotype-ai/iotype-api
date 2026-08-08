@@ -29,9 +29,12 @@ const (
 	DefaultBaseURL = "https://iotype.com"
 	// DefaultTimeout is the per-request timeout.
 	DefaultTimeout = 120 * time.Second
-	// SampleRate is the recommended audio sample rate for realtime ASR.
-	SampleRate = 16000
 )
+
+// Note: there is deliberately no sample-rate constant here. The realtime ASR
+// server dictates the rate in its authorization reply — read
+// RealtimeSession.SampleRate after connecting. Hardcoding a rate produces
+// silently wrong transcripts rather than an error.
 
 // Language is an ISO 639-1 code accepted by the API.
 type Language string

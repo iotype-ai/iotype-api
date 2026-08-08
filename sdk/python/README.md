@@ -1,9 +1,12 @@
 # iotype — Python SDK
 
 ```bash
-pip install iotype              # HTTP only
-pip install "iotype[realtime]"  # + streaming ASR
+pip install iotype-ai               # HTTP only
+pip install "iotype-ai[realtime]"   # + streaming ASR
 ```
+
+`pip install iotype` also works — it is a PyPI alias that pulls in `iotype-ai`.
+Either way the import is `iotype`.
 
 ```python
 from iotype import Iotype
@@ -76,7 +79,7 @@ Audio is **PCM 16-bit, mono, little-endian**, raw binary, 20 ms per frame.
 
 From a **browser or mobile app**, mint a Flash Token server-side and pass `token_type="flash_token"`. Never ship your access token to a client.
 
-A complete browser implementation of this protocol lives in [`examples/browser-asr/`](../../examples/browser-asr/).
+A complete browser implementation of this protocol lives in [`examples/browser-asr/`](https://github.com/iotype-ai/iotype-api/tree/main/examples/browser-asr/).
 
 ## Errors
 
@@ -101,4 +104,4 @@ Built on the [iotype API](https://iotype.com/api-service) — Persian, English a
 
 - [Get an API token](https://iotype.com/api-service/authentication) · [API token packages](https://iotype.com/plans/api)
 - [realtime ASR API reference](https://iotype.com/api-service/speech-to-text) · [OCR API reference](https://iotype.com/api-service/ocr)
-- Full guides: [English](../../docs/en/) · [فارسی](../../docs/fa/) · [OpenAPI spec](../../spec/openapi.yaml)
+- Full guides: [English](https://github.com/iotype-ai/iotype-api/tree/main/docs/en/) · [فارسی](https://github.com/iotype-ai/iotype-api/tree/main/docs/fa/) · [OpenAPI spec](https://github.com/iotype-ai/iotype-api/blob/main/spec/openapi.yaml)

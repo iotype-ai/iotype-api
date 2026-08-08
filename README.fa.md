@@ -95,8 +95,8 @@ out, _ := io.Translate(ctx, "سلام دنیا", "fa", "en")
 
 نصب و شرح کامل متدها در پوشه‌ی [`sdk/`](sdk/).
 
-نام رسمی پکیج‌ها در همه‌ی رجیستری‌ها `iotype-ai` است، اما `pip install iotype` و
-`npm install iotype` هم کار می‌کنند — توضیح در [`sdk/aliases/`](sdk/aliases/).
+نام رسمی پکیج‌ها در همه‌ی رجیستری‌ها `iotype-ai` است. روی PyPI دستور
+`pip install iotype` هم کار می‌کند — توضیح در [`sdk/aliases/`](sdk/aliases/).
 
 ## احراز هویت
 
@@ -131,7 +131,7 @@ sdk/python/     SDK رسمی پایتون
 sdk/javascript/ SDK رسمی جاوااسکریپت/تایپ‌اسکریپت
 sdk/php/        SDK رسمی PHP
 sdk/go/         SDK رسمی Go
-sdk/aliases/    پکیج‌های alias تا `pip install iotype` و `npm i iotype` هم کار کند
+sdk/aliases/    alias روی PyPI تا `pip install iotype` هم کار کند
 site/           سورس سایت مستندات روی GitHub Pages
 PUBLISHING.md   راهنمای انتشار در هر رجیستری
 AGENTS.md       راهنما برای دستیارهای کدنویسی هوش مصنوعی

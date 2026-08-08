@@ -25,8 +25,6 @@ sdk/aliases/pypi-iotype/dist/
 
 # Node
 node_modules/
-sdk/aliases/npm-iotype/node_modules/
-sdk/aliases/npm-iotype/package-lock.json
 sdk/javascript/dist/
 *.tsbuildinfo
 .npm/

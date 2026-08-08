@@ -94,8 +94,8 @@ out, _ := io.Translate(ctx, "سلام دنیا", "fa", "en")
 
 Installation and full API surface: [`sdk/`](sdk/).
 
-Published as `iotype-ai` on every registry. `pip install iotype` and
-`npm install iotype` also work — see [`sdk/aliases/`](sdk/aliases/).
+Published as `iotype-ai` on every registry. On PyPI, `pip install iotype` also
+works — see [`sdk/aliases/`](sdk/aliases/).
 
 ## Authentication
 
@@ -124,7 +124,7 @@ sdk/python/    Official Python SDK
 sdk/javascript/ Official JavaScript/TypeScript SDK
 sdk/php/       Official PHP SDK
 sdk/go/        Official Go SDK
-sdk/aliases/   Alias packages so `pip install iotype` and `npm i iotype` work
+sdk/aliases/   PyPI alias so `pip install iotype` also works
 site/          Source of the GitHub Pages documentation site
 PUBLISHING.md  Release runbook for every registry
 AGENTS.md      Instructions for AI coding assistants

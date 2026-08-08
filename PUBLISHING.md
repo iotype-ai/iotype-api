@@ -4,9 +4,14 @@ Run these on your own machine. Every step needs credentials for the registry in
 question, so none of it can be automated from CI until you add the tokens as
 repository secrets.
 
-**Order matters.** Publish each real package before its alias — an alias whose
-dependency does not exist yet will fail to install and cannot be edited after
-the fact. Registries do not allow republishing a version.
+**Order matters.** Publish `iotype-ai` on PyPI before its alias `iotype` — an
+alias whose dependency does not exist yet will fail to install, and a published
+version can never be replaced.
+
+**Expect propagation delay.** After a successful publish, npm's CDN can take a
+minute or two before `npm install` finds the package. An `E404` immediately
+after publishing is almost always this, not a real problem. Wait and retry
+before investigating anything else.
 
 ---
 
@@ -21,7 +26,7 @@ Names are first-come. Claiming them costs nothing and takes minutes; losing
 | PyPI | `iotype-ai` | free |
 | PyPI | `iotype` | free — **claim this** |
 | npm scope | `@iotype-ai` | free |
-| npm | `iotype` | free — **claim this** |
+| npm | `iotype` | **blocked** — too similar to `io-type`; nobody can claim it |
 | npm scope | `@iotype` | taken by an unrelated company |
 | Packagist | `iotype-ai/sdk` | derives from the GitHub org |
 
@@ -79,17 +84,27 @@ npm publish --access public
 `--access public` is required. Scoped packages default to private, and the
 publish will be rejected on a free account without it.
 
-## 4. npm alias — `iotype`
+## 4. npm alias — not possible, and not needed
 
-```bash
-cd sdk/aliases/npm-iotype
-npm publish
+npm refuses to create the package `iotype`:
+
+```
+403 Forbidden - PUT https://registry.npmjs.org/iotype
+Package name too similar to existing package io-type
 ```
 
-```bash
-mkdir /tmp/n && cd /tmp/n && npm init -y >/dev/null && npm install iotype
-node -e "import('iotype').then(m => console.log(typeof m.Iotype))"
-```
+[`io-type`](https://www.npmjs.com/package/io-type) is an unrelated TypeScript
+utility-types package, and npm's typosquatting filter blocks anything close to
+an existing name. **Do not work around this** by publishing under a different
+name — a name nobody will guess adds nothing.
+
+The filter applies to every account, so no one else can register `iotype`
+either. The defensive goal is met without publishing anything.
+
+On npm the package is simply `@iotype-ai/sdk`.
+
+> A name being absent from the registry does not mean it can be created.
+> Similarity is only enforced at publish time.
 
 ---
 

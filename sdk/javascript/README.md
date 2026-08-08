@@ -82,7 +82,7 @@ const transcript = await session.finish();        // sends eof, waits, closes
 
 ### From the browser
 
-A complete, tested implementation — microphone capture, resampling, framing and teardown — is in [`examples/browser-asr/`](../../examples/browser-asr/). Start there rather than from scratch.
+A complete, tested implementation — microphone capture, resampling, framing and teardown — is in [`examples/browser-asr/`](https://github.com/iotype-ai/iotype-api/tree/main/examples/browser-asr/). Start there rather than from scratch.
 
 ```ts
 import { float32ToPcm16 } from "@iotype-ai/sdk";
@@ -124,4 +124,4 @@ Built on the [iotype API](https://iotype.com/api-service) — Persian, English a
 
 - [Get an API token](https://iotype.com/api-service/authentication) · [API token packages](https://iotype.com/plans/api)
 - [realtime ASR API reference](https://iotype.com/api-service/speech-to-text) · [text-to-speech API voices](https://iotype.com/api-service/text-to-speech)
-- Full guides: [English](../../docs/en/) · [فارسی](../../docs/fa/) · [OpenAPI spec](../../spec/openapi.yaml)
+- Full guides: [English](https://github.com/iotype-ai/iotype-api/tree/main/docs/en/) · [فارسی](https://github.com/iotype-ai/iotype-api/tree/main/docs/fa/) · [OpenAPI spec](https://github.com/iotype-ai/iotype-api/blob/main/spec/openapi.yaml)

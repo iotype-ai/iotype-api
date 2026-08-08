@@ -76,7 +76,7 @@ $transcript = $session->finish();       // sends eof, drains, closes
 
 Audio is **PCM 16-bit, mono, little-endian**, raw binary, 20 ms per frame. `RealtimeSession::float32ToPcm16()` converts normalised float samples.
 
-From a browser or mobile app, mint a Flash Token server-side and pass `'flash_token'` as the third argument. Never ship your access token to a client. A complete browser implementation is in [`examples/browser-asr/`](../../examples/browser-asr/).
+From a browser or mobile app, mint a Flash Token server-side and pass `'flash_token'` as the third argument. Never ship your access token to a client. A complete browser implementation is in [`examples/browser-asr/`](https://github.com/iotype-ai/iotype-api/tree/main/examples/browser-asr/).
 
 ## Errors
 
@@ -102,4 +102,4 @@ Built on the [iotype API](https://iotype.com/api-service) — Persian, English a
 
 - [Get an API token](https://iotype.com/api-service/authentication) · [API token packages](https://iotype.com/plans/api)
 - [OCR API reference](https://iotype.com/api-service/ocr) · [translation API reference](https://iotype.com/api-service/translation)
-- Full guides: [English](../../docs/en/) · [فارسی](../../docs/fa/) · [OpenAPI spec](../../spec/openapi.yaml)
+- Full guides: [English](https://github.com/iotype-ai/iotype-api/tree/main/docs/en/) · [فارسی](https://github.com/iotype-ai/iotype-api/tree/main/docs/fa/) · [OpenAPI spec](https://github.com/iotype-ai/iotype-api/blob/main/spec/openapi.yaml)

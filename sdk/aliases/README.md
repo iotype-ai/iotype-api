@@ -1,37 +1,43 @@
 # Alias packages
 
 The project is published as **`iotype-ai`** everywhere, matching the GitHub
-organisation. But the shorter name `iotype` is still unclaimed on both PyPI and
-npm, and it is the name developers will guess first.
-
-These two tiny packages claim it. Each one contains **no code** — it simply
-depends on the real SDK, so `pip install iotype` and `npm install iotype` both
-resolve to the correct package.
+organisation. On PyPI the shorter name `iotype` is also claimed, because it is
+what developers guess first.
 
 | Alias | Resolves to | Directory |
 | --- | --- | --- |
 | PyPI `iotype` | `iotype-ai` | [`pypi-iotype/`](pypi-iotype/) |
-| npm `iotype` | `@iotype-ai/sdk` | [`npm-iotype/`](npm-iotype/) |
+
+The package contains **no code** — it simply depends on the real SDK, so
+`pip install iotype` resolves to the correct package. `iotype-ai` is what
+provides the importable `iotype` module; shipping one from the alias too would
+collide with it.
 
 ## Why bother
 
-1. **Prevents squatting.** An unclaimed name matching your brand is an open
-   door. On npm in particular, a package called `iotype` published by someone
-   else and imported by your users is a supply-chain risk you cannot undo.
-2. **Catches the guess.** Plenty of developers will type `pip install iotype`
-   before reading the README. Without this, they get "No matching distribution".
-3. **A second listing.** Registry pages rank in search results, and each one
-   carries its own set of links back to iotype.com.
+1. **Catches the guess.** Plenty of developers type `pip install iotype` before
+   reading anything. Without this they get "No matching distribution".
+2. **Prevents squatting.** An unclaimed name matching your brand is an open door.
+3. **A second listing.** Registry pages rank in search results and each carries
+   its own links back to iotype.com.
+
+## Why there is no npm alias
+
+npm rejects the name `iotype` — it is too similar to the existing
+[`io-type`](https://www.npmjs.com/package/io-type) package, and npm's
+typosquatting filter refuses to create it:
+
+```
+403 Forbidden - PUT https://registry.npmjs.org/iotype
+Package name too similar to existing package io-type
+```
+
+This filter applies to everyone, so nobody else can claim `iotype` either — the
+defensive goal is met without publishing anything. On npm the package is simply
+`@iotype-ai/sdk`.
 
 ## Publishing
 
-See [`PUBLISHING.md`](../../PUBLISHING.md) in the repository root.
-
-Publish the **real** packages first — an alias whose dependency does not exist
-yet will fail to install.
-
-## Maintenance
-
-Bump the alias version and its pinned dependency whenever the real SDK has a
-release worth pointing at. The alias does not need to track every patch; a
-floating lower bound (`>=1.0`) is enough for most releases.
+See [`PUBLISHING.md`](../../PUBLISHING.md) in the repository root. Publish the
+real package first — an alias whose dependency does not exist yet will fail to
+install.

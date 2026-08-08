@@ -84,7 +84,7 @@ transcript, _ := session.Finish(3 * time.Second)
 
 `session.Text()` is committed + partial — the correct thing to render.
 
-From a browser or mobile client, mint a Flash Token server-side and pass `TokenType: iotype.FlashToken`. Never ship an access token to a client. A complete browser implementation is in [`examples/browser-asr/`](../../examples/browser-asr/).
+From a browser or mobile client, mint a Flash Token server-side and pass `TokenType: iotype.FlashToken`. Never ship an access token to a client. A complete browser implementation is in [`examples/browser-asr/`](https://github.com/iotype-ai/iotype-api/tree/main/examples/browser-asr/).
 
 ## Errors
 
@@ -108,4 +108,4 @@ Built on the [iotype API](https://iotype.com/api-service) — Persian, English a
 
 - [Get an API token](https://iotype.com/api-service/authentication) · [API token packages](https://iotype.com/plans/api)
 - [realtime ASR API reference](https://iotype.com/api-service/speech-to-text) · [transcription API reference](https://iotype.com/api-service/transcription)
-- Full guides: [English](../../docs/en/) · [فارسی](../../docs/fa/) · [AsyncAPI spec](../../spec/asyncapi.yaml)
+- Full guides: [English](https://github.com/iotype-ai/iotype-api/tree/main/docs/en/) · [فارسی](https://github.com/iotype-ai/iotype-api/tree/main/docs/fa/) · [AsyncAPI spec](https://github.com/iotype-ai/iotype-api/blob/main/spec/asyncapi.yaml)

@@ -23,8 +23,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added (naming)
 - Published under the `iotype-ai` organisation; module path, package names and
   all repository URLs follow it.
-- Alias packages in `sdk/aliases/` so `pip install iotype` and
-  `npm install iotype` resolve to the real SDK.
+- PyPI alias in `sdk/aliases/` so `pip install iotype` resolves to the real SDK.
+  There is no npm equivalent: npm rejects the name `iotype` as too similar to
+  the existing `io-type` package. That filter applies to everyone, so the name
+  cannot be squatted either.
 - `PUBLISHING.md` — release runbook for PyPI, npm, Packagist and Go.
 - `.github/scripts/check-anchors.py` — CI guard against generic anchor text on
   links to iotype.com service pages.
