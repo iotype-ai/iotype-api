@@ -125,6 +125,7 @@ spec/           اسپک OpenAPI 3.1 و AsyncAPI 3.0 — مرجع اصلی
 docs/en/        راهنماهای انگلیسی
 docs/fa/        راهنماهای فارسی
 examples/curl/  یک اسکریپت قابل اجرا برای هر endpoint
+examples/browser-asr/ کلاینت تست‌شده‌ی مرورگر برای پروتکل تایپ صوتی همزمان
 postman/        کالکشن قابل ایمپورت Postman
 sdk/python/     SDK رسمی پایتون
 sdk/javascript/ SDK رسمی جاوااسکریپت/تایپ‌اسکریپت

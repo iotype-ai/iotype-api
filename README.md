@@ -118,6 +118,7 @@ spec/          OpenAPI 3.1 and AsyncAPI 3.0 definitions — the source of truth
 docs/en/       Task-oriented guides, English
 docs/fa/       Task-oriented guides, Persian
 examples/curl/ One runnable shell script per endpoint
+examples/browser-asr/ Tested browser client for the realtime ASR protocol
 postman/       Importable Postman collection
 sdk/python/    Official Python SDK
 sdk/javascript/ Official JavaScript/TypeScript SDK

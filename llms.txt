@@ -14,7 +14,7 @@ Base URL: `https://iotype.com`. Every endpoint is `POST` and requires `Authoriza
 ## Guides
 
 - [Authentication](https://iotype.com/api-service/authentication): Bearer token setup, and the Access Token vs Flash Token distinction for client-side apps.
-- [Realtime ASR](https://iotype.com/api-service/speech-to-text): Streaming speech-to-text over `wss://iotype.com/socket/realtime`. The handshake is `{"config":{"model":"io-fa","type":"access_token","token":"..."}}` — the fields are nested inside `config`. Audio is PCM 16-bit mono little-endian at 16 kHz, sent as binary frames.
+- [Realtime ASR](https://iotype.com/api-service/speech-to-text): Streaming speech-to-text over `wss://iotype.com/socket/realtime`. Handshake is `{"config":{"model":"io-fa","type":"access_token","token":"..."}}`; the server replies `{"status":"authorized","sample_rate":N}` and you must resample audio to N Hz — it is not a fixed value. Audio is raw binary PCM 16-bit mono little-endian in 20 ms frames. Results arrive as `{"partial":"..."}` (interim) and `{"text":"..."}` (settled), distinguished by which key is present. Send `{"eof":1}` before closing or the last utterance is lost.
 - [Transcription](https://iotype.com/api-service/transcription): `POST /io/v1/transcribe/instant` for short clips (synchronous) and `POST /io/v1/transcribe` for long recordings (asynchronous, higher accuracy).
 - [OCR](https://iotype.com/api-service/ocr): `POST /io/v1/ocr` converts PDF and JPG to text, with optional summarisation. Works on scanned and text-layer PDFs. Text only — no charts or tables.
 - [Translation](https://iotype.com/api-service/translation): `POST /io/v1/translate` between `fa`, `en` and `ar`. Synchronous.
@@ -22,5 +22,6 @@ Base URL: `https://iotype.com`. Every endpoint is `POST` and requires `Authoriza
 
 ## Optional
 
+- [Browser ASR client example](https://github.com/iotype-ai/iotype-api/tree/main/examples/browser-asr): A complete, tested browser implementation of the realtime protocol — microphone capture, resampling, framing and teardown in ~100 lines of dependency-free JavaScript.
 - [Instructions for AI coding assistants](https://raw.githubusercontent.com/iotype-ai/iotype-api/main/AGENTS.md): Concentrated rules, the async polling pattern, and the list of behaviours that are commonly generated incorrectly.
 - [Pricing](https://iotype.com/plans/api): Token packages. New accounts receive 300 free tokens.

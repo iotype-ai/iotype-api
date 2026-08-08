@@ -94,36 +94,59 @@ When `should_summarize` is true, expect an additional process carrying the summa
 
 Connect to `wss://iotype.com/socket/realtime`.
 
-**Message 1 — must be first, must be JSON, no audio before it:**
+This protocol is documented from a **tested, working client** in
+`examples/browser-asr/`. Read that file if anything below is ambiguous. There
+are four steps and skipping any of them breaks the session.
+
+**Step 1 — handshake. Must be first, must be JSON, no audio before it:**
 
 ```json
 { "config": { "model": "io-fa", "type": "flash_token", "token": "..." } }
 ```
 
-**The three fields are nested inside `config`.** Sending them at the top level
-is a protocol error — this is the most common mistake when generating this
-handshake, because earlier versions of the docs showed them unnested.
+The three fields are nested inside `config`. Top-level is a protocol error.
 
-**Then** stream audio as **binary** frames:
-
-- PCM linear 16-bit, mono, little-endian
-- 16000 Hz recommended; the declared rate must match the actual bytes
-- **Do not base64-encode.** Send raw bytes.
-- Send small frames continuously (20–100 ms each). Large infrequent frames degrade latency and accuracy.
-
-**Server sends** JSON on the same socket:
+**Step 2 — WAIT for the reply. Do not send audio before it arrives:**
 
 ```json
-{ "type": "partial", "text": "سلام حال" }
-{ "type": "final",   "text": "سلام حال شما چطور است؟" }
+{ "status": "authorized", "model": "io-fa", "sample_rate": 44100 }
+{ "error": "unauthorized" }
 ```
 
-Handle them differently:
+**`sample_rate` is authoritative and is NOT a constant.** Resample your capture
+to exactly this value. Never hardcode 16000 or any other number. A browser
+`AudioContext` typically runs at 48000 Hz, so conversion is almost always
+required. A mismatch throws no error — it silently produces wrong transcripts.
+This is the most common cause of "the API returns nonsense".
 
-- `partial` — interim, will be revised. Render it in the UI. **Never persist it.**
-- `final` — settled for that utterance, will not change. Persist it. Recognition continues afterwards; a session yields many finals.
+**Step 3 — stream audio as binary frames:**
 
-A correct UI keeps a committed buffer of finals and renders `committed + currentPartial`.
+- PCM linear 16-bit, mono, little-endian, at the negotiated `sample_rate`
+- **Do not base64-encode.** Send raw bytes.
+- 20 ms per frame — `sample_rate / 50` samples. Audio callbacks do not arrive
+  in 20 ms multiples, so buffer into a queue and slice fixed-size frames from it.
+
+**Step 4 — end the session properly:**
+
+```json
+{ "eof": 1 }
+```
+
+Flush any queued audio, send `eof`, then wait ~3 seconds before closing.
+Closing immediately after the last audio frame **loses the final utterance**.
+
+**Results** — two shapes, distinguished by **which key is present**. There is
+no `type` field:
+
+```json
+{ "partial": "سلام حال" }
+{ "text": "سلام حال شما چطور است؟" }
+```
+
+- `partial` — interim, will be revised. Render it. **Never persist it.** May be an empty string.
+- `text` — settled for that utterance, will not change. Persist it. May be an empty string, so check before appending. A session yields many of these.
+
+A correct UI keeps a committed buffer of finals and renders `committed + currentPartial`. Appending partials produces duplicated text.
 
 ---
 
@@ -146,6 +169,7 @@ Do not invent values for these. Mark them `TODO` and surface the uncertainty to 
 - Rate limits, max upload size, max audio duration, max PDF page count
 - Token cost per page / per audio minute / per character
 - Whether webhooks or callbacks exist as an alternative to polling
+- Which sample rates a deployment may return (read `sample_rate`, never assume)
 
 ---
 

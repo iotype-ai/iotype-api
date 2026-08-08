@@ -57,6 +57,8 @@ Backoff is 5s doubling to a 60s ceiling. On timeout you get `ProcessingTimeout` 
 
 ## Realtime ASR
 
+`connect()` resolves only after the server authorizes, so `sampleRate` is known before you touch the microphone.
+
 ```ts
 const session = io.realtime({ model: "io-fa", tokenType: "flash_token", token: flashToken });
 
@@ -64,33 +66,39 @@ session.onPartial = () => render(session.text);   // interim, may change
 session.onFinal   = () => render(session.text);   // settled
 
 await session.connect();
+console.log(session.sampleRate);                  // e.g. 44100 — resample to this
+console.log(session.frameSize);                   // samples per 20 ms frame
+
 session.sendAudio(pcmChunk);                      // raw PCM16 mono LE
+
+const transcript = await session.finish();        // sends eof, waits, closes
 ```
+
+**`sampleRate` is not a constant.** The server dictates it. An `AudioContext` typically runs at 48000 Hz, so you will be resampling — a mismatch produces silently wrong transcripts rather than an error.
+
+**Call `finish()` rather than `close()`.** It sends `{"eof":1}` and waits for the trailing result; closing directly loses the last utterance.
 
 `session.text` is `committed + partial` — the correct thing to render. Appending partials yourself produces duplicated text.
 
 ### From the browser
 
+A complete, tested implementation — microphone capture, resampling, framing and teardown — is in [`examples/browser-asr/`](../../examples/browser-asr/). Start there rather than from scratch.
+
 ```ts
-import { float32ToPcm16, SAMPLE_RATE } from "@iotype-ai/sdk";
+import { float32ToPcm16 } from "@iotype-ai/sdk";
 
 // The flash token comes from YOUR server, which holds the access token.
 const { token } = await fetch("/api/iotype-flash-token").then(r => r.json());
 const io = new Iotype(token);
 const session = io.realtime({ model: "io-fa", tokenType: "flash_token" });
-await session.connect();
 
-const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-const ctx = new AudioContext({ sampleRate: SAMPLE_RATE });
-const src = ctx.createMediaStreamSource(stream);
-const node = ctx.createScriptProcessor(2048, 1, 1);
+await session.connect();                          // sampleRate known after this
 
-node.onaudioprocess = e => session.sendAudio(float32ToPcm16(e.inputBuffer.getChannelData(0)));
-src.connect(node);
-node.connect(ctx.destination);
+const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1 } });
+const ctx = new AudioContext();                   // whatever rate the OS gives
+// resample ctx.sampleRate -> session.sampleRate, then:
+// session.sendAudio(float32ToPcm16(resampledFrame));
 ```
-
-> `ScriptProcessorNode` is deprecated — move the conversion into an `AudioWorklet` for production.
 
 **Never construct a client-side `Iotype` with your access token.** Mint a short-lived flash token server-side.
 

@@ -50,14 +50,20 @@ Backoff is 5s doubling to a 60s ceiling over a 30-minute deadline; tune with `*P
 
 ## Realtime ASR
 
+`Realtime` completes the handshake and returns only once the server has authorized, so `SampleRate` is populated on the session.
+
 ```go
 session, err := io.Realtime(ctx, &iotype.RealtimeOptions{Model: iotype.ModelPersian})
-defer session.Close()
+if err != nil { log.Fatal(err) }
+
+log.Println(session.SampleRate)   // e.g. 44100 — resample your audio to this
+log.Println(session.FrameSize())  // samples per 20 ms frame
 
 go func() {
     for _, chunk := range audioChunks {
-        session.SendAudio(chunk)   // raw PCM16 mono LE
+        session.SendAudio(chunk)   // raw PCM16 mono LE, at session.SampleRate
     }
+    session.EndOfStream()          // {"eof":1} — flush the decoder
 }()
 
 for event := range session.Events() {
@@ -69,14 +75,16 @@ for event := range session.Events() {
     }
 }
 
-fmt.Println(session.Transcript())
+transcript, _ := session.Finish(3 * time.Second)
 ```
+
+**`SampleRate` is not a constant.** The server dictates it; hardcoding a rate produces silently wrong transcripts rather than an error. `iotype.ResampleLinear()` converts, `iotype.Float32ToPCM16()` encodes.
+
+**Use `Finish` rather than `Close`.** It sends `{"eof":1}` and waits for the trailing result; closing directly loses the last utterance.
 
 `session.Text()` is committed + partial — the correct thing to render.
 
-`iotype.Float32ToPCM16([]float32{...})` converts normalised float samples.
-
-From a browser or mobile client, mint a Flash Token server-side and pass `TokenType: iotype.FlashToken`. Never ship an access token to a client.
+From a browser or mobile client, mint a Flash Token server-side and pass `TokenType: iotype.FlashToken`. Never ship an access token to a client. A complete browser implementation is in [`examples/browser-asr/`](../../examples/browser-asr/).
 
 ## Errors
 

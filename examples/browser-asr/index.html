@@ -1,0 +1,6 @@
+<!doctype html>
+<html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Iotype تایپ صوتی</title><link rel="stylesheet" href="style.css"></head>
+<body><main><p class="brand">IOTYPE MULTI-MODEL</p><h1>تایپ صوتی</h1>
+<section><label>آدرس WebSocket<input id="url" value="wss://iotype.com/socket/realtime" dir="ltr"></label><div class="grid"><label>مدل<select id="model"><option value="io-fa">فارسی · io-fa</option><option value="io-en">English · io-en</option><option value="io-ar">العربية · io-ar</option></select></label><label>نوع توکن<select id="type"><option value="flash_token">flash_token</option><option value="access_token">access_token</option></select></label></div><label>توکن<input id="token" type="password" dir="ltr" autocomplete="off"></label></section>
+<div class="controls"><button id="start">شروع ضبط</button><button id="stop" disabled>توقف</button><button id="clear">پاک‌کردن متن</button><span id="status">آماده</span></div>
+<section><div class="title"><h2>متن نهایی</h2><span id="format">—</span></div><div id="final" class="final"></div><p>در حال شنیدن: <span id="partial">—</span></p></section><p id="message">مدل و توکن را انتخاب کنید.</p></main><script src="pcm.js"></script><script src="app.js"></script></body></html>

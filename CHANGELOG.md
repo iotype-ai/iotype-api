@@ -29,6 +29,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `.github/scripts/check-anchors.py` — CI guard against generic anchor text on
   links to iotype.com service pages.
 
+### Fixed (realtime ASR protocol)
+Corrected against a tested browser client. The previously documented shapes were wrong:
+
+- The server replies to the handshake with `{"status":"authorized","model":...,"sample_rate":N}`
+  or `{"error":...}`. Clients must wait for it before sending audio. This reply
+  was previously undocumented.
+- `sample_rate` is dictated by the server and is not fixed. Audio must be
+  resampled to it. The docs previously stated a flat 16000 Hz recommendation.
+- Results are `{"partial":"..."}` and `{"text":"..."}`, told apart by which key
+  is present. The docs previously showed a non-existent `{"type":"partial","text":...}` shape.
+- `{"eof":1}` flushes the decoder at end of stream. The docs previously said no
+  end-of-stream message existed.
+- Added `examples/browser-asr/` — the tested reference client.
+
 ### Known gaps
 Items marked `x-unverified` in the spec, pending confirmation against live responses:
 - Flash Token endpoint path, response shape and TTL

@@ -53,22 +53,30 @@ Backoff is 5s doubling to a 60s ceiling. On timeout you get `ProcessingTimeoutEx
 
 PHP is a poor fit for long-lived audio streaming. For production realtime work, prefer the Node or Go SDK and keep PHP for the HTTP endpoints. For short server-side sessions:
 
+`connect()` completes the handshake and returns only once the server authorizes, so `$sampleRate` is known afterwards.
+
 ```php
 $session = $io->realtime('io-fa')->connect();
 
-$session->sendAudio($pcmChunk);         // raw PCM16 mono LE
+echo $session->sampleRate;              // e.g. 44100 — resample your audio to this
+echo $session->frameSize();             // samples per 20 ms frame
+
+$session->sendAudio($pcmChunk);         // raw PCM16 mono LE, at $sampleRate
 
 while (($event = $session->receive()) !== null) {
     echo "\r" . $session->text();       // committed + partial
 }
 
-echo $session->committed;
-$session->close();
+$transcript = $session->finish();       // sends eof, drains, closes
 ```
 
-Audio must be **PCM 16-bit, mono, little-endian**, 16 kHz recommended, sent as raw binary in 20–100 ms frames. `RealtimeSession::float32ToPcm16()` converts normalised float samples.
+**`$sampleRate` is not a constant.** The server dictates it; hardcoding a rate produces silently wrong transcripts rather than an error.
 
-From a browser or mobile app, mint a Flash Token server-side and pass `'flash_token'` as the third argument. Never ship your access token to a client.
+**Use `finish()` rather than `close()`.** It sends `{"eof":1}` and drains the trailing result; closing directly loses the last utterance.
+
+Audio is **PCM 16-bit, mono, little-endian**, raw binary, 20 ms per frame. `RealtimeSession::float32ToPcm16()` converts normalised float samples.
+
+From a browser or mobile app, mint a Flash Token server-side and pass `'flash_token'` as the third argument. Never ship your access token to a client. A complete browser implementation is in [`examples/browser-asr/`](../../examples/browser-asr/).
 
 ## Errors
 

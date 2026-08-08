@@ -2,26 +2,30 @@ asyncapi: 3.0.0
 
 info:
   title: iotype Realtime ASR
-  version: "1.0.0"
+  version: "1.1.0"
   description: |
     Streaming speech recognition over a secure WebSocket.
+
+    **This specification is written from a working, tested browser client**
+    (`examples/browser-asr/`), not from prose. Where it disagreed with the
+    published website documentation, the client won.
 
     **Lifecycle**
 
     1. Open a WebSocket to `wss://iotype.com/socket/realtime`.
-    2. Send exactly one JSON `Initialize` message — nothing else may precede it.
-       Its fields live inside a `config` object:
-       `{"config":{"model":"io-fa","type":"access_token","token":"..."}}`
-    3. Stream raw PCM audio as binary frames.
-    4. Receive `partial` results while the speaker talks, and a `final`
-       result at each pause.
-    5. Close the socket when the session ends.
+    2. Send the `Initialize` message. Its fields are nested inside a `config`
+       object: `{"config":{"model":"io-fa","type":"access_token","token":"..."}}`
+    3. **Wait for the `AuthResult` reply.** Send no audio before it arrives —
+       it carries the `sample_rate` you must resample to.
+    4. Stream raw PCM audio as binary frames at that sample rate.
+    5. Receive `{"partial": "..."}` while the speaker talks, and
+       `{"text": "..."}` when an utterance settles.
+    6. Send `{"eof": 1}` to flush the decoder, then close a few seconds later.
 
-    **Audio format** — PCM linear 16-bit, mono, little-endian. 16000 Hz is
-    recommended. The declared sample rate must match the bytes you actually
-    send. Do not base64-encode; send raw bytes. Prefer many small frames
-    (20-100 ms each) over few large ones — it lowers latency and improves
-    accuracy.
+    **Audio format** — PCM linear 16-bit, mono, little-endian, at the
+    `sample_rate` the server returned. Do not assume a fixed rate; the browser's
+    `AudioContext` typically runs at 48000 Hz and must be resampled. Do not
+    base64-encode. Prefer 20 ms frames.
 
     **Token choice** — use a `flash_token` from any client you do not control
     (browser, Android, iOS, desktop). Use an `access_token` only for
@@ -47,8 +51,12 @@ channels:
     messages:
       initialize:
         $ref: '#/components/messages/Initialize'
+      authResult:
+        $ref: '#/components/messages/AuthResult'
       audioChunk:
         $ref: '#/components/messages/AudioChunk'
+      endOfStream:
+        $ref: '#/components/messages/EndOfStream'
       partialResult:
         $ref: '#/components/messages/PartialResult'
       finalResult:
@@ -61,10 +69,15 @@ operations:
       $ref: '#/channels/realtime'
     summary: Authenticate and select a recognition model
     description: |
-      Must be the first message on the socket. Send no audio until the server
-      has accepted it.
+      Must be the first message on the socket. Send no audio until the
+      `AuthResult` reply has been received.
     messages:
       - $ref: '#/channels/realtime/messages/initialize'
+    reply:
+      channel:
+        $ref: '#/channels/realtime'
+      messages:
+        - $ref: '#/channels/realtime/messages/authResult'
 
   streamAudio:
     action: send
@@ -73,6 +86,14 @@ operations:
     summary: Stream raw audio frames
     messages:
       - $ref: '#/channels/realtime/messages/audioChunk'
+
+  endStream:
+    action: send
+    channel:
+      $ref: '#/channels/realtime'
+    summary: Flush the decoder and request the last result
+    messages:
+      - $ref: '#/channels/realtime/messages/endOfStream'
 
   receiveResults:
     action: receive
@@ -92,7 +113,7 @@ components:
       title: Initialize session
       contentType: application/json
       summary: |
-        First and only handshake message. The three fields are nested inside a
+        First message on the socket. The three fields are nested inside a
         `config` envelope — they are not top-level.
       payload:
         type: object
@@ -100,7 +121,7 @@ components:
         properties:
           config:
             type: object
-            required: [model, type, token]
+            required: [type, token]
             properties:
               model:
                 $ref: '#/components/schemas/Model'
@@ -123,14 +144,82 @@ components:
               type: "access_token"
               token: "YOUR_ACCESS_TOKEN"
 
+    AuthResult:
+      name: authResult
+      title: Authentication result
+      contentType: application/json
+      summary: |
+        The server's reply to `Initialize`. **Wait for this before sending
+        audio** — `sample_rate` tells you what rate to resample to.
+
+        On failure the payload carries `error` instead, and the server closes
+        the connection.
+      payload:
+        oneOf:
+          - type: object
+            title: Authorized
+            required: [status]
+            properties:
+              status:
+                type: string
+                const: authorized
+              model:
+                $ref: '#/components/schemas/Model'
+              sample_rate:
+                type: integer
+                description: |
+                  The sample rate, in Hz, that the server expects audio at.
+                  Resample your capture to exactly this value. It is not fixed
+                  across deployments — read it, do not hardcode it.
+                examples: [44100, 16000]
+          - type: object
+            title: Rejected
+            required: [error]
+            properties:
+              error:
+                type: string
+                description: Why authentication failed, e.g. `unauthorized`.
+      examples:
+        - name: authorized
+          payload:
+            status: "authorized"
+            model: "io-fa"
+            sample_rate: 44100
+        - name: rejected
+          payload:
+            error: "unauthorized"
+
     AudioChunk:
       name: audioChunk
       title: Audio frame
       contentType: application/octet-stream
-      summary: Raw PCM 16-bit mono little-endian audio, sent as a binary frame.
+      summary: |
+        Raw PCM 16-bit mono little-endian audio at the negotiated
+        `sample_rate`, sent as a binary frame. 20 ms per frame is a good
+        default — `sample_rate / 50` samples.
       payload:
         type: string
         format: binary
+
+    EndOfStream:
+      name: eof
+      title: End of stream
+      contentType: application/json
+      summary: |
+        Tells the server no more audio is coming and to flush its decoder. The
+        last `FinalResult` arrives shortly afterwards, so wait a few seconds
+        before closing the socket rather than closing immediately.
+      payload:
+        type: object
+        required: [eof]
+        properties:
+          eof:
+            type: integer
+            const: 1
+      examples:
+        - name: endSession
+          payload:
+            eof: 1
 
     PartialResult:
       name: partial
@@ -139,39 +228,40 @@ components:
       summary: |
         Interim transcript emitted while the speaker is mid-utterance. It may
         be revised by later messages. Render it, but do not persist it.
+
+        Identified by the presence of the `partial` key. An empty string means
+        the interim hypothesis was cleared.
       payload:
         type: object
+        required: [partial]
         properties:
-          type:
-            type: string
-            const: partial
-          text:
+          partial:
             type: string
       examples:
         - name: interim
           payload:
-            type: "partial"
-            text: "سلام حال"
+            partial: "سلام حال"
 
     FinalResult:
       name: final
       title: Final result
       contentType: application/json
       summary: |
-        Settled transcript for one utterance, emitted at a pause. It will not
-        change. Persist this. Recognition continues afterwards.
+        Settled transcript for one utterance, emitted at a pause or after
+        `eof`. It will not change. Persist this. Recognition continues
+        afterwards, so a session yields many of these.
+
+        Identified by the presence of the `text` key. It may be an empty
+        string when an utterance produced nothing — check before appending.
       payload:
         type: object
+        required: [text]
         properties:
-          type:
-            type: string
-            const: final
           text:
             type: string
       examples:
         - name: settled
           payload:
-            type: "final"
             text: "سلام حال شما چطور است؟"
 
   schemas:
@@ -183,6 +273,7 @@ components:
         Recognition model.
         `io-fa` Persian, `io-en` English, `io-ar` Arabic.
         Matching the model to the spoken language materially improves accuracy.
+        The server echoes the selected model back in `AuthResult`.
 
     TokenType:
       type: string

@@ -20,8 +20,13 @@ export const SPEAKERS = [
 ] as const;
 export type Speaker = (typeof SPEAKERS)[number];
 
-/** Recommended audio format for realtime ASR. */
-export const SAMPLE_RATE = 16000;
+/**
+ * Frame duration used when slicing audio, in seconds.
+ *
+ * There is deliberately no SAMPLE_RATE constant — the server dictates the rate
+ * in its authorization reply. Read `session.sampleRate` after connecting.
+ */
+export const FRAME_SECONDS = 0.02;
 
 export interface Process {
   type?: string;
@@ -375,19 +380,43 @@ export interface RealtimeEvent {
   text: string;
 }
 
+/** The server's reply to the handshake. */
+export interface AuthResult {
+  status?: "authorized" | string;
+  model?: Model;
+  /** The rate the server expects audio at. Not a fixed constant. */
+  sample_rate?: number;
+  error?: string;
+}
+
 /**
  * A streaming speech-recognition session.
  *
- * Audio must be **PCM 16-bit, mono, little-endian**, sent as raw binary.
- * 16 kHz recommended. Send 20–100 ms frames continuously; large infrequent
- * frames increase latency and reduce accuracy.
+ * The protocol has four steps, and skipping any of them breaks the session:
  *
- * `partial` events are interim and may be revised — render them, never
- * persist them. `final` events are settled — persist those.
+ * 1. Send the handshake, nested inside a `config` object.
+ * 2. **Wait for the reply.** It carries {@link sampleRate} — the rate you must
+ *    resample to. Sending audio before it arrives closes the socket.
+ * 3. Stream PCM 16-bit mono little-endian audio as raw binary, 20 ms per frame.
+ * 4. Call {@link finish} (or {@link endOfStream}) before closing, or the final
+ *    utterance is lost.
+ *
+ * Never base64-encode the audio.
+ *
+ * `partial` events are interim and may be revised — render them, never persist
+ * them. `final` events are settled — persist those.
  */
 export class RealtimeSession {
   private ws?: WebSocket;
   private readonly cfg: { url: string; token: string; tokenType: TokenType; model: Model };
+
+  /**
+   * Sample rate the server expects, in Hz. Set by {@link connect}.
+   * **Resample your audio to this — do not assume a fixed value.**
+   */
+  sampleRate?: number;
+  /** Model the server selected, echoed back in the authorization reply. */
+  negotiatedModel?: Model;
 
   /** Concatenated final transcript so far. */
   committed = "";
@@ -403,8 +432,15 @@ export class RealtimeSession {
     this.cfg = cfg;
   }
 
-  /** Connect and send the handshake. Resolves once the socket is open. */
-  async connect(): Promise<this> {
+  /**
+   * Connect, send the handshake, and wait for the server to authorize.
+   *
+   * Resolves only once `{ status: "authorized" }` has arrived. After that,
+   * {@link sampleRate} holds the rate you must resample audio to.
+   *
+   * @throws IotypeError if the server rejects the token or does not reply.
+   */
+  async connect(timeoutMs = 30_000): Promise<this> {
     const WS: typeof WebSocket =
       (globalThis as { WebSocket?: typeof WebSocket }).WebSocket ??
       ((await import("ws")) as unknown as { default: typeof WebSocket }).default;
@@ -415,10 +451,10 @@ export class RealtimeSession {
 
     await new Promise<void>((resolve, reject) => {
       ws.addEventListener("open", () => resolve());
-      ws.addEventListener("error", (e) => reject(e));
+      ws.addEventListener("error", () => reject(new IotypeError("WebSocket connection failed.")));
     });
 
-    // Must be the first message. Sending audio before it closes the socket.
+    // Step 1 — handshake. Must be first; audio before this closes the socket.
     // Note the "config" envelope — the fields are nested, not top-level.
     ws.send(JSON.stringify({
       config: {
@@ -428,18 +464,54 @@ export class RealtimeSession {
       },
     }));
 
+    // Step 2 — wait for authorization. It carries the sample rate.
+    const auth = await new Promise<AuthResult>((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new IotypeError("No authorization reply from the ASR server.")),
+        timeoutMs,
+      );
+      const onAuth = (event: MessageEvent) => {
+        if (typeof event.data !== "string") return;
+        let msg: AuthResult;
+        try { msg = JSON.parse(event.data); } catch { return; }
+
+        if (msg.error) {
+          clearTimeout(timer);
+          ws.removeEventListener("message", onAuth);
+          reject(new IotypeError(`ASR authorization rejected: ${msg.error}`));
+        } else if (msg.status === "authorized") {
+          clearTimeout(timer);
+          ws.removeEventListener("message", onAuth);
+          resolve(msg);
+        }
+      };
+      ws.addEventListener("message", onAuth);
+    });
+
+    this.sampleRate = auth.sample_rate;
+    this.negotiatedModel = auth.model;
+
+    if (!this.sampleRate) {
+      this.close();
+      throw new IotypeError(
+        "Server did not return a sample_rate; audio cannot be sent without it.",
+      );
+    }
+
+    // Results. Two shapes, told apart by which key is present — no `type` field.
     ws.addEventListener("message", (event: MessageEvent) => {
       if (typeof event.data !== "string") return;
-      let msg: RealtimeEvent;
+      let msg: { partial?: string; text?: string };
       try { msg = JSON.parse(event.data); } catch { return; }
 
-      if (msg.type === "partial") {
-        this.partial = msg.text ?? "";
+      if (typeof msg.partial === "string") {
+        this.partial = msg.partial;
         this.onPartial?.(this.partial);
-      } else if (msg.type === "final") {
-        this.committed += (msg.text ?? "") + " ";
+      }
+      if (typeof msg.text === "string" && msg.text.trim()) {
+        this.committed += msg.text.trim() + " ";
         this.partial = "";
-        this.onFinal?.(msg.text ?? "");
+        this.onFinal?.(msg.text.trim());
       }
     });
 
@@ -449,7 +521,16 @@ export class RealtimeSession {
     return this;
   }
 
-  /** Send one frame of raw PCM 16-bit mono little-endian audio. */
+  /** Samples per 20 ms frame at the negotiated rate. */
+  get frameSize(): number {
+    if (!this.sampleRate) throw new IotypeError("Not connected — sampleRate is unknown.");
+    return Math.round(this.sampleRate / 50);
+  }
+
+  /**
+   * Send one frame of raw PCM 16-bit mono little-endian audio.
+   * The audio must already be at {@link sampleRate}.
+   */
   sendAudio(chunk: ArrayBuffer | Uint8Array | Int16Array): void {
     if (!this.ws || this.ws.readyState !== 1) return;
     const buf =
@@ -459,9 +540,32 @@ export class RealtimeSession {
     this.ws.send(buf);
   }
 
+  /**
+   * Tell the server no more audio is coming and to flush its decoder.
+   *
+   * The last final result arrives shortly afterwards, so do not close
+   * immediately — {@link close} waits for you if you pass a delay.
+   */
+  endOfStream(): void {
+    if (!this.ws || this.ws.readyState !== 1) return;
+    this.ws.send(JSON.stringify({ eof: 1 }));
+  }
+
   /** What to render: settled text plus the current interim text. */
   get text(): string {
     return this.committed + this.partial;
+  }
+
+  /**
+   * Send `eof`, wait for the last result, then close.
+   *
+   * Closing without this loses the final utterance.
+   */
+  async finish(waitMs = 3000): Promise<string> {
+    this.endOfStream();
+    await sleep(waitMs);
+    this.close();
+    return this.committed.trim();
   }
 
   close(): void {

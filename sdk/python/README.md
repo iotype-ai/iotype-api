@@ -49,23 +49,34 @@ Backoff is 5s doubling to a 60s ceiling. On timeout you get `ProcessingTimeout` 
 
 ## Realtime ASR
 
+`connect()` completes the handshake and blocks until the server authorizes, so `sample_rate` is known before you open a microphone.
+
 ```python
 import threading
 
 with io.realtime(model="io-fa") as session:
+    print(session.sample_rate)   # e.g. 44100 — the server decides, resample to it
+    print(session.frame_size)    # samples per 20 ms frame
+
     threading.Thread(target=feed_audio, args=(session,), daemon=True).start()
 
     committed = ""
     for event in session:
         if event["type"] == "partial":
             print(committed + event["text"], end="\r")   # interim — do not persist
-        elif event["type"] == "final":
-            committed += event["text"] + " "             # settled — persist this
+        elif event["text"].strip():
+            committed += event["text"].strip() + " "     # settled — persist this
 ```
 
-Audio must be **PCM 16-bit, mono, little-endian**, 16 kHz recommended, sent as raw binary in 20–100 ms frames. `iotype.realtime.float32_to_pcm16()` converts normalised float samples.
+**`sample_rate` is not a constant.** The server tells you what it wants and you resample to match; hardcoding a rate produces silently wrong transcripts. `iotype.realtime.resample_linear()` handles the conversion, `float32_to_pcm16()` the encoding.
+
+Audio is **PCM 16-bit, mono, little-endian**, raw binary, 20 ms per frame.
+
+**Call `end_of_stream()` before closing** — it sends `{"eof":1}` and flushes the decoder. Closing without it loses the last utterance. `run()` does this for you.
 
 From a **browser or mobile app**, mint a Flash Token server-side and pass `token_type="flash_token"`. Never ship your access token to a client.
+
+A complete browser implementation of this protocol lives in [`examples/browser-asr/`](../../examples/browser-asr/).
 
 ## Errors
 
