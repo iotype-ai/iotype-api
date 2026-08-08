@@ -85,7 +85,7 @@ jobs:
       - run: composer validate --strict
       - run: composer install --no-interaction --no-progress
       - name: Autoloading resolves from the root manifest
-        run: php -r 'require "vendor/autoload.php"; new Iotype\\Client("t"); echo "autoload OK\n";' 
+        run: php .github/scripts/php-autoload-check.php
 
   shell:
     name: curl examples
