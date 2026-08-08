@@ -6,11 +6,11 @@ import os
 import random
 import time
 from pathlib import Path
-from typing import Any, Iterable, Literal
+from typing import Any, Literal
 
 import requests
 
-from .errors import IotypeError, ProcessingTimeout, RateLimitError, ServerError, raise_for_status
+from .errors import IotypeError, ProcessingTimeout, raise_for_status
 from .models import File
 
 Language = Literal["fa", "en", "ar"]
@@ -353,7 +353,7 @@ class Iotype:
     def close(self) -> None:
         self._session.close()
 
-    def __enter__(self) -> "Iotype":
+    def __enter__(self) -> Iotype:
         return self
 
     def __exit__(self, *exc: object) -> None:

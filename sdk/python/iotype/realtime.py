@@ -10,9 +10,11 @@ The protocol implemented here is taken from a tested browser client
 
 from __future__ import annotations
 
+import contextlib
 import json
 import threading
-from typing import Any, Callable, Iterator, Literal
+from collections.abc import Iterator
+from typing import Any, Callable, Literal
 
 from .errors import RealtimeError
 
@@ -82,7 +84,7 @@ class RealtimeSession:
 
     # ------------------------------------------------------------------ session
 
-    def connect(self, timeout: float = 30.0) -> "RealtimeSession":
+    def connect(self, timeout: float = 30.0) -> RealtimeSession:
         """Open the socket, send the handshake, and wait for authorization.
 
         Returns once the server has accepted the token. :attr:`sample_rate` is
@@ -179,7 +181,7 @@ class RealtimeSession:
         while True:
             try:
                 raw = self._ws.recv()
-            except Exception:  # connection closed by either side
+            except Exception:  # any failure here means the socket is gone
                 return
             if not raw:
                 return
@@ -244,11 +246,9 @@ class RealtimeSession:
         """
         if self._ws is None:
             return
-        with self._lock:
-            try:
-                self._ws.send(json.dumps({"eof": 1}))
-            except Exception:
-                pass
+        # Best effort — the socket may already be closed by the server.
+        with self._lock, contextlib.suppress(Exception):
+            self._ws.send(json.dumps({"eof": 1}))
 
     def close(self) -> None:
         if self._ws is not None:
@@ -257,14 +257,14 @@ class RealtimeSession:
             finally:
                 self._ws = None
 
-    def __enter__(self) -> "RealtimeSession":
+    def __enter__(self) -> RealtimeSession:
         return self.connect()
 
     def __exit__(self, *exc: object) -> None:
         self.close()
 
 
-def float32_to_pcm16(samples: "Iterator[float] | Any") -> bytes:
+def float32_to_pcm16(samples: Iterator[float] | Any) -> bytes:
     """Convert normalised float samples in [-1, 1] to PCM 16-bit little-endian.
 
     Accepts a numpy array or any iterable of floats.
@@ -287,7 +287,7 @@ def float32_to_pcm16(samples: "Iterator[float] | Any") -> bytes:
     return bytes(out)
 
 
-def resample_linear(samples: "Any", input_rate: int, output_rate: int) -> "Any":
+def resample_linear(samples: Any, input_rate: int, output_rate: int) -> Any:
     """Resample float samples with linear interpolation.
 
     A convenience for the common case where your capture device runs at one
@@ -310,6 +310,6 @@ def resample_linear(samples: "Any", input_rate: int, output_rate: int) -> "Any":
         return data
 
     duration = data.size / input_rate
-    target = int(round(duration * output_rate))
+    target = round(duration * output_rate)
     positions = np.linspace(0, data.size - 1, target, dtype=np.float64)
     return np.interp(positions, np.arange(data.size), data).astype(np.float32)

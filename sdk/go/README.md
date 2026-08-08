@@ -91,12 +91,15 @@ From a browser or mobile client, mint a Flash Token server-side and pass `TokenT
 ```go
 var authErr *iotype.AuthError
 var timeout *iotype.TimeoutError
+var apiErr  *iotype.APIError      // catch-all base type
 
 switch {
 case errors.As(err, &authErr):
     // missing/malformed/expired token, OR exhausted balance
 case errors.As(err, &timeout):
     // timeout.UUID is still processing server-side
+case errors.As(err, &apiErr):
+    // anything else; apiErr.Status has the HTTP code
 }
 ```
 

@@ -177,7 +177,7 @@ func New(token string, opts ...Option) (*Client, error) {
 		token = os.Getenv("IOTYPE_TOKEN")
 	}
 	if token == "" {
-		return nil, &Error{Message: "no token: pass one to New or set IOTYPE_TOKEN. " +
+		return nil, &APIError{Message: "no token: pass one to New or set IOTYPE_TOKEN. " +
 			"Generate one at https://iotype.com/api-service/authentication"}
 	}
 
@@ -242,7 +242,7 @@ func (c *Client) Synthesize(ctx context.Context, text string, opts *SynthesizeOp
 		}
 	}
 	if !valid {
-		return "", &Error{Message: fmt.Sprintf("unknown speaker %q; valid: %s",
+		return "", &APIError{Message: fmt.Sprintf("unknown speaker %q; valid: %s",
 			speaker, strings.Join(Speakers, ", "))}
 	}
 
@@ -362,7 +362,7 @@ type PollOptions struct {
 // be billed again.
 func (c *Client) WaitFor(ctx context.Context, uuid, processType string, opts *PollOptions) (string, error) {
 	if uuid == "" {
-		return "", &Error{Message: "no uuid to track: the upload response had no file.uuid"}
+		return "", &APIError{Message: "no uuid to track: the upload response had no file.uuid"}
 	}
 
 	timeout, interval, maxInterval := 30*time.Minute, 5*time.Second, 60*time.Second
@@ -418,7 +418,7 @@ func (c *Client) Download(ctx context.Context, url, dest string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 300 {
-		return &Error{Status: resp.StatusCode, Message: "download failed"}
+		return &APIError{Status: resp.StatusCode, Message: "download failed"}
 	}
 
 	f, err := os.Create(dest)
@@ -445,7 +445,7 @@ func (c *Client) postJSON(ctx context.Context, path string, payload any, out any
 
 func (c *Client) postMultipart(ctx context.Context, path, filePath string, fields map[string]string, out any) error {
 	if _, err := os.Stat(filePath); err != nil {
-		return &Error{Message: fmt.Sprintf("file not found: %s", filePath)}
+		return &APIError{Message: fmt.Sprintf("file not found: %s", filePath)}
 	}
 
 	build := func() (io.Reader, string) {
@@ -493,7 +493,7 @@ func (c *Client) do(ctx context.Context, path string, build func() (io.Reader, s
 		if err != nil {
 			lastErr = err
 			if attempt == c.maxRetries-1 {
-				return &Error{Message: fmt.Sprintf("request to %s failed: %v", path, err)}
+				return &APIError{Message: fmt.Sprintf("request to %s failed: %v", path, err)}
 			}
 			backoff(ctx, attempt)
 			continue
@@ -522,7 +522,7 @@ func (c *Client) do(ctx context.Context, path string, build func() (io.Reader, s
 			return nil
 		}
 		if err := json.Unmarshal(raw, out); err != nil {
-			return &Error{
+			return &APIError{
 				Status:  resp.StatusCode,
 				Message: fmt.Sprintf("%s returned an unparseable body: %s", path, truncate(raw, 200)),
 			}
@@ -530,7 +530,7 @@ func (c *Client) do(ctx context.Context, path string, build func() (io.Reader, s
 		return nil
 	}
 
-	return &Error{Message: fmt.Sprintf("request to %s failed after %d attempts: %v", path, c.maxRetries, lastErr)}
+	return &APIError{Message: fmt.Sprintf("request to %s failed after %d attempts: %v", path, c.maxRetries, lastErr)}
 }
 
 func backoff(ctx context.Context, attempt int) {

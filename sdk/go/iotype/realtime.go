@@ -104,7 +104,7 @@ func (c *Client) Realtime(ctx context.Context, opts *RealtimeOptions) (*Realtime
 	url := strings.Replace(strings.Replace(c.baseURL, "https://", "wss://", 1), "http://", "ws://", 1)
 	conn, _, err := websocket.DefaultDialer.DialContext(ctx, url+"/socket/realtime", nil)
 	if err != nil {
-		return nil, &RealtimeError{&Error{Message: "could not open realtime socket: " + err.Error()}}
+		return nil, &RealtimeError{&APIError{Message: "could not open realtime socket: " + err.Error()}}
 	}
 
 	// Step 1 — handshake. Must be the first message; the fields are nested
@@ -118,7 +118,7 @@ func (c *Client) Realtime(ctx context.Context, opts *RealtimeOptions) (*Realtime
 	})
 	if err := conn.WriteMessage(websocket.TextMessage, handshake); err != nil {
 		_ = conn.Close()
-		return nil, &RealtimeError{&Error{Message: "handshake failed: " + err.Error()}}
+		return nil, &RealtimeError{&APIError{Message: "handshake failed: " + err.Error()}}
 	}
 
 	// Step 2 — wait for authorization before sending any audio.
@@ -127,25 +127,25 @@ func (c *Client) Realtime(ctx context.Context, opts *RealtimeOptions) (*Realtime
 	_ = conn.SetReadDeadline(time.Time{})
 	if err != nil {
 		_ = conn.Close()
-		return nil, &RealtimeError{&Error{Message: "no authorization reply: " + err.Error()}}
+		return nil, &RealtimeError{&APIError{Message: "no authorization reply: " + err.Error()}}
 	}
 
 	var auth authResult
 	if err := json.Unmarshal(raw, &auth); err != nil {
 		_ = conn.Close()
-		return nil, &RealtimeError{&Error{Message: fmt.Sprintf("unparseable authorization reply: %s", truncate(raw, 200))}}
+		return nil, &RealtimeError{&APIError{Message: fmt.Sprintf("unparseable authorization reply: %s", truncate(raw, 200))}}
 	}
 	if auth.Error != "" {
 		_ = conn.Close()
-		return nil, &RealtimeError{&Error{Message: "authorization rejected: " + auth.Error}}
+		return nil, &RealtimeError{&APIError{Message: "authorization rejected: " + auth.Error}}
 	}
 	if auth.Status != "authorized" {
 		_ = conn.Close()
-		return nil, &RealtimeError{&Error{Message: fmt.Sprintf("unexpected authorization reply: %s", truncate(raw, 200))}}
+		return nil, &RealtimeError{&APIError{Message: fmt.Sprintf("unexpected authorization reply: %s", truncate(raw, 200))}}
 	}
 	if auth.SampleRate == 0 {
 		_ = conn.Close()
-		return nil, &RealtimeError{&Error{Message: "server returned no sample_rate; audio cannot be sent without it"}}
+		return nil, &RealtimeError{&APIError{Message: "server returned no sample_rate; audio cannot be sent without it"}}
 	}
 
 	return &RealtimeSession{
@@ -164,7 +164,7 @@ func (s *RealtimeSession) FrameSize() int {
 // The audio must already be at SampleRate.
 func (s *RealtimeSession) SendAudio(chunk []byte) error {
 	if s.conn == nil {
-		return &RealtimeError{&Error{Message: "session is closed"}}
+		return &RealtimeError{&APIError{Message: "session is closed"}}
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()

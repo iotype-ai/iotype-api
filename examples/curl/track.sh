@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Fetch the current state of one file.
+# shellcheck source=examples/curl/_common.sh
 source "$(dirname "$0")/_common.sh"
 
 UUID="${1:?usage: track.sh <uuid>}"

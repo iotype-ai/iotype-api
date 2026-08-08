@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Long MP3 -> text. ASYNCHRONOUS: returns a uuid, then polls until done.
+# shellcheck source=examples/curl/_common.sh
 source "$(dirname "$0")/_common.sh"
 
 FILE="${1:?usage: transcribe.sh <file.mp3> [lang] [summarize]}"

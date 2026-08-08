@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Text to speech. Returns { "url": "...mp3" }. Synchronous.
+# shellcheck source=examples/curl/_common.sh
 source "$(dirname "$0")/_common.sh"
 
 TEXT="${1:-سلام! امروز هوا بسیار عالی است.}"
@@ -12,4 +13,7 @@ RESP=$(curl -sS -X POST "$BASE/io/v1/synthesis" "${AUTH[@]}" "${JSON[@]}" \
 
 echo "$RESP"
 URL=$(echo "$RESP" | jq -r '.url // empty')
-[ -n "$URL" ] && curl -sS -o narration.mp3 "$URL" && echo "saved -> narration.mp3"
+if [ -n "$URL" ]; then
+  curl -sS -o narration.mp3 "$URL"
+  echo "saved -> narration.mp3"
+fi

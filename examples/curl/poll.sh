@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Poll a uuid until the requested process carries a result.
 # Backoff: 5s doubling to a 60s ceiling. Overall deadline: 30 minutes.
+# shellcheck source=examples/curl/_common.sh
 source "$(dirname "$0")/_common.sh"
 
 UUID="${1:?usage: poll.sh <uuid> [process-type]}"
@@ -25,5 +26,6 @@ while :; do
   fi
 
   sleep "$BACKOFF"
-  BACKOFF=$(( BACKOFF * 2 )); [ "$BACKOFF" -gt 60 ] && BACKOFF=60
+  BACKOFF=$(( BACKOFF * 2 ))
+  if [ "$BACKOFF" -gt 60 ]; then BACKOFF=60; fi
 done

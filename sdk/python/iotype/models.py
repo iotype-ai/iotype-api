@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import Any, Iterator
+from typing import Any
 
 
 @dataclass
@@ -25,7 +26,7 @@ class Process:
         return self.result is not None
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Process":
+    def from_dict(cls, data: dict[str, Any]) -> Process:
         return cls(
             type=data.get("type"),
             status=data.get("status"),
@@ -45,7 +46,7 @@ class File:
     raw: dict[str, Any] = field(default_factory=dict, repr=False)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "File":
+    def from_dict(cls, data: dict[str, Any]) -> File:
         return cls(
             uuid=data.get("uuid"),
             name=data.get("name"),

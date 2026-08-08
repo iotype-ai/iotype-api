@@ -32,7 +32,8 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "${{ matrix.python-version }}" }
       - run: pip install -e ".[dev,realtime]"
-      - run: ruff check iotype
+      - name: Lint (rule set pinned in pyproject.toml)
+        run: ruff check iotype
       - run: python -m compileall iotype examples
       - run: pytest -q
         if: hashFiles('sdk/python/tests/**') != ''

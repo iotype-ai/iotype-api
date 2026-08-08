@@ -24,7 +24,7 @@ dependencies = ["requests>=2.28"]
 
 [project.optional-dependencies]
 realtime = ["websocket-client>=1.6"]
-dev = ["pytest>=7", "ruff>=0.4", "mypy>=1.8", "types-requests"]
+dev = ["pytest>=7", "ruff>=0.16,<0.17", "mypy>=1.8", "types-requests"]
 
 [project.urls]
 Homepage = "https://iotype.com"
@@ -40,3 +40,24 @@ packages = ["iotype"]
 [tool.ruff]
 line-length = 100
 target-version = "py39"
+
+# Pin the rule set explicitly. Relying on ruff's defaults means CI breaks
+# whenever ruff widens them — which is what happened on the first run.
+[tool.ruff.lint]
+select = [
+  "E", "W",   # pycodestyle
+  "F",        # pyflakes
+  "I",        # import sorting
+  "UP",       # pyupgrade
+  "B",        # bugbear
+  "C4",       # comprehensions
+  "SIM",      # simplify
+  "RUF",      # ruff-specific
+]
+ignore = [
+  # `Self` is Python 3.11+, and this package supports 3.9 without pulling in
+  # typing_extensions. Returning the concrete class is correct here.
+  "PYI034",
+  # Long lines inside docstrings and URLs are fine.
+  "E501",
+]
