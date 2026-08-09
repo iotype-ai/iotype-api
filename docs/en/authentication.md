@@ -32,7 +32,14 @@ If a token is ever exposed — pasted in a screenshot, committed, or logged — 
 
 ## Access Token vs Flash Token
 
-Real-time ASR supports two credential types. Choosing the wrong one is the most common security mistake with this API.
+There are two credential types and their scopes do not overlap. Choosing the wrong one is the most common security mistake with this API.
+
+| Credential | Accepted by | Lifetime |
+| --- | --- | --- |
+| Access Token | **every HTTP endpoint**, and the realtime WebSocket when opened from your own server | long-lived |
+| Flash Token | **the realtime ASR WebSocket only** | short-lived, single-use |
+
+**A Flash Token is scoped to real-time speech-to-text and nothing else.** No HTTP endpoint accepts one. Transcription, OCR, translation, text-to-speech and the file endpoints all authenticate with an Access Token — which means those calls belong on your server, because there is no client-side credential for them.
 
 ### Access Token
 
@@ -45,11 +52,13 @@ Never place it in a browser, mobile app, or desktop application. Anything shippe
 
 ### Flash Token
 
-A short-lived, single-use token minted for one ASR connection. Use it for:
+A short-lived, single-use token minted for one ASR connection. Use it **only** to open `wss://iotype.com/socket/realtime` from:
 
 - Browsers
 - Android and iOS apps
 - Desktop applications
+
+Real-time ASR is the one service where the client must open the connection itself, so some credential has to reach the user's device. The Flash Token exists for that single case. It is not a general-purpose client credential, and sending one to an HTTP endpoint will not authenticate the request.
 
 The flow:
 

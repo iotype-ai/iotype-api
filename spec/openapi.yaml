@@ -452,6 +452,11 @@ paths:
         with your Access Token, hand it to the client, and let the client open
         the WebSocket with it. Never ship an Access Token to a browser or a
         mobile app.
+
+        **Scope:** the resulting token is accepted only by the realtime ASR
+        WebSocket (`wss://iotype.com/socket/realtime`). No endpoint in this
+        specification accepts a Flash Token — every one of them requires an
+        Access Token, and therefore must be called server-side.
       parameters:
         - $ref: '#/components/parameters/Accept'
         - $ref: '#/components/parameters/XRequestedWith'

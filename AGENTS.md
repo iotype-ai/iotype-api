@@ -10,6 +10,7 @@ If a machine-readable contract is more useful to you than prose, use [`spec/open
 
 1. **Never hardcode a token.** Read it from an environment variable — `IOTYPE_TOKEN` by convention. Never write a literal token into source, tests, notebooks or committed config.
 2. **Never send an Access Token to a browser, mobile app or desktop client.** For real-time ASR from such clients, mint a Flash Token server-side. This is the single most common security mistake with this API.
+   **A Flash Token is scoped to the realtime ASR WebSocket and nothing else** — no HTTP endpoint accepts one. OCR, transcription, translation, text-to-speech and the file endpoints have no client-side credential, so those calls must be made from your server.
 3. **Every endpoint is `POST`.** There are no `GET` endpoints. `/io/v1/files` takes an empty JSON body `{}`, not no body.
 4. **`/io/v1/ocr` and `/io/v1/transcribe` are asynchronous.** They return a `file` object, not a result. You must poll. Code that reads a transcript directly from their response is wrong.
 5. **Never poll in a tight loop.** Use exponential backoff starting at 5s, capped at 60s, with an overall timeout.

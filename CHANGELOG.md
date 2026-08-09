@@ -19,6 +19,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `config` envelope — `{"config":{"model":"io-fa","type":"access_token","token":"..."}}`.
   Updated in the AsyncAPI spec, both realtime guides, `AGENTS.md`, `llms.txt`
   and all four SDKs.
+- Flash Token scope is now stated explicitly: it is accepted by the realtime ASR
+  WebSocket and by nothing else, and no HTTP endpoint takes one. The previous
+  wording said only "use it for browsers and mobile apps", which reads as a
+  general client credential and invited code that tried to authenticate an OCR
+  or transcription call with it. Clarified in both authentication guides, both
+  READMEs, `AGENTS.md`, `llms.txt` and the OpenAPI description.
 
 ### Added (naming)
 - Published under the `iotype-ai` organisation; module path, package names and

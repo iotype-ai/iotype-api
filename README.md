@@ -105,7 +105,9 @@ Every request carries a bearer token:
 Authorization: Bearer <TOKEN>
 ```
 
-For real-time ASR from a browser or mobile app, mint a short-lived **Flash Token** on your server and hand that to the client instead — never ship your Access Token to code you do not control. See [docs/en/authentication.md](docs/en/authentication.md).
+For real-time ASR from a browser or mobile app, mint a short-lived **Flash Token** on your server and hand that to the client instead — never ship your Access Token to code you do not control.
+
+A Flash Token is scoped to the realtime ASR WebSocket and nothing else; no HTTP endpoint accepts one. Transcription, OCR, translation and text-to-speech therefore have no client-side credential and must be called from your server. See [docs/en/authentication.md](docs/en/authentication.md).
 
 ## Billing
 

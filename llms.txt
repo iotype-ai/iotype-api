@@ -13,7 +13,7 @@ Base URL: `https://iotype.com`. Every endpoint is `POST` and requires `Authoriza
 
 ## Guides
 
-- [Authentication](https://iotype.com/api-service/authentication): Bearer token setup, and the Access Token vs Flash Token distinction for client-side apps.
+- [Authentication](https://iotype.com/api-service/authentication): Bearer token setup. Every HTTP endpoint authenticates with an Access Token, which belongs on your server only. A Flash Token is short-lived, single-use, and scoped exclusively to the realtime ASR WebSocket — no HTTP endpoint accepts one.
 - [Realtime ASR](https://iotype.com/api-service/speech-to-text): Streaming speech-to-text over `wss://iotype.com/socket/realtime`. Handshake is `{"config":{"model":"io-fa","type":"access_token","token":"..."}}`; the server replies `{"status":"authorized","sample_rate":N}` and you must resample audio to N Hz — it is not a fixed value. Audio is raw binary PCM 16-bit mono little-endian in 20 ms frames. Results arrive as `{"partial":"..."}` (interim) and `{"text":"..."}` (settled), distinguished by which key is present. Send `{"eof":1}` before closing or the last utterance is lost.
 - [Transcription](https://iotype.com/api-service/transcription): `POST /io/v1/transcribe/instant` for short clips (synchronous) and `POST /io/v1/transcribe` for long recordings (asynchronous, higher accuracy).
 - [OCR](https://iotype.com/api-service/ocr): `POST /io/v1/ocr` converts PDF and JPG to text, with optional summarisation. Works on scanned and text-layer PDFs. Text only — no charts or tables.
