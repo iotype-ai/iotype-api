@@ -87,7 +87,7 @@ echo $io->translate('سلام دنیا', 'fa', 'en');
 
 ```go
 // Go
-io := iotype.New("")
+io, _ := iotype.New("")   // New دو مقدار برمی‌گرداند: (*Client, error)
 out, _ := io.Translate(ctx, "سلام دنیا", "fa", "en")
 ```
 

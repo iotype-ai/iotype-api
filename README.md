@@ -86,7 +86,7 @@ echo $io->translate('سلام دنیا', 'fa', 'en');
 <tr><td><b>Go</b></td><td>
 
 ```go
-io := iotype.New("")
+io, _ := iotype.New("")   // New returns (*Client, error)
 out, _ := io.Translate(ctx, "سلام دنیا", "fa", "en")
 ```
 </td></tr>
